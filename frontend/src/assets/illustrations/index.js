@@ -1,0 +1,5 @@
+export { SecurityAnalystIllustration } from './SecurityAnalystIllustration'
+export { LoginHeroIllustration } from './LoginHeroIllustration'
+export { EmptyStateIllustration } from './EmptyStateIllustration'
+export { ErrorStateIllustration } from './ErrorStateIllustration'
+export { ScanningLoaderIllustration } from './ScanningLoaderIllustration'
