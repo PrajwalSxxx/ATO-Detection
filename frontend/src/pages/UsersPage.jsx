@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Pagination } from '@/components/ui/Pagination'
 import { SearchInput } from '@/components/ui/SearchInput'
+import { Tabs } from '@/components/ui/Tabs'
 import { useUsers, useUserLogins, useUserDevices } from '@/hooks/useUsers'
 import { formatDateTime, formatRelativeTime } from '@/utils/formatters'
 import { notify } from '@/components/ui/Toast'
@@ -18,9 +19,15 @@ import {
   Laptop,
   Activity,
   Eye,
+  ShieldCheck,
+  ShieldAlert,
+  User,
+  Layers,
+  X,
 } from 'lucide-react'
 
 export default function UsersPage() {
+  const [role, setRole] = useState('ALL')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(25)
@@ -33,6 +40,19 @@ export default function UsersPage() {
   const [newRole, setNewRole] = useState('user')
   const [newPassword, setNewPassword] = useState('')
 
+  const handleRoleTabChange = (newRole) => {
+    setRole(newRole)
+    setPage(1)
+  }
+
+  const handleClearFilters = () => {
+    setRole('ALL')
+    setSearch('')
+    setPage(1)
+  }
+
+  const isFiltered = role !== 'ALL' || Boolean(search)
+
   const {
     users,
     total,
@@ -41,7 +61,12 @@ export default function UsersPage() {
     isCreating,
     deactivateUser,
     isDeactivating,
-  } = useUsers({ search, page, page_size: pageSize })
+  } = useUsers({
+    search,
+    role: role !== 'ALL' ? role : undefined,
+    page,
+    page_size: pageSize,
+  })
 
   // User detail secondary data
   const { data: userLogins } = useUserLogins(selectedUser?.id, { limit: 10 })
@@ -154,25 +179,59 @@ export default function UsersPage() {
     },
   ]
 
+  const roleTabs = [
+    { id: 'ALL', label: 'All Accounts', icon: Layers },
+    { id: 'admin', label: 'Administrators', icon: ShieldCheck },
+    { id: 'analyst', label: 'Security Analysts', icon: ShieldAlert },
+    { id: 'user', label: 'Standard Users', icon: User },
+  ]
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="User Identity Directory"
         description="Directory of provisioned users, identity risk profiles, and associated authorized devices."
         actions={
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => setIsCreateOpen(true)}
-            leftIcon={<UserPlus className="w-3.5 h-3.5" />}
-          >
-            Provision User
-          </Button>
+          <div className="flex items-center gap-2">
+            {isFiltered && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearFilters}
+                leftIcon={<X className="w-3.5 h-3.5" />}
+              >
+                Clear Filters
+              </Button>
+            )}
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setIsCreateOpen(true)}
+              leftIcon={<UserPlus className="w-3.5 h-3.5" />}
+            >
+              Provision User
+            </Button>
+          </div>
         }
       />
 
-      {/* Search Toolbar */}
-      <div className="bg-paper-raised border border-line-soft rounded-[10px] p-4 shadow-sm">
+      {/* Filter & Search Hub */}
+      <div className="bg-paper-raised border border-line-soft rounded-[10px] p-4 shadow-sm space-y-4">
+        {/* Top Role Tabs */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-line-soft pb-3">
+          <Tabs
+            tabs={roleTabs}
+            activeTab={role}
+            onChange={handleRoleTabChange}
+            layoutId="usersRoleTabs"
+          />
+
+          <span className="font-mono text-xs text-ink-3 self-end sm:self-center">
+            {isLoading ? 'Loading directory...' : `${total} matching accounts`}
+          </span>
+        </div>
+
+        {/* Search input */}
         <div className="max-w-md">
           <label className="text-[11px] font-mono uppercase tracking-wider text-ink-3 block mb-1">
             Search Identities

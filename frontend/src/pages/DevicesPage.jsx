@@ -3,23 +3,61 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { WindowFrame } from '@/components/ui/WindowFrame'
 import { DataTable } from '@/components/ui/DataTable'
 import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
 import { CopyableMono } from '@/components/ui/CopyableMono'
 import { Pagination } from '@/components/ui/Pagination'
 import { SearchInput } from '@/components/ui/SearchInput'
+import { Tabs } from '@/components/ui/Tabs'
 import { useDevices } from '@/hooks/useDevices'
 import { formatDateTime, formatRelativeTime } from '@/utils/formatters'
-import { Laptop, Smartphone, ShieldAlert, Sparkles } from 'lucide-react'
+import {
+  Laptop,
+  Smartphone,
+  ShieldAlert,
+  Sparkles,
+  ShieldCheck,
+  Layers,
+  X,
+} from 'lucide-react'
 
 export default function DevicesPage() {
+  const [trustFilter, setTrustFilter] = useState('ALL')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(25)
 
+  const isTrustedParam =
+    trustFilter === 'trusted'
+      ? true
+      : trustFilter === 'untrusted'
+      ? false
+      : undefined
+
   const { devices, total, isLoading } = useDevices({
     search: search || undefined,
+    is_trusted: isTrustedParam,
     page,
     page_size: pageSize,
   })
+
+  const handleTabChange = (val) => {
+    setTrustFilter(val)
+    setPage(1)
+  }
+
+  const handleClearFilters = () => {
+    setTrustFilter('ALL')
+    setSearch('')
+    setPage(1)
+  }
+
+  const isFiltered = trustFilter !== 'ALL' || Boolean(search)
+
+  const filterTabs = [
+    { id: 'ALL', label: 'All Clients', icon: Layers },
+    { id: 'trusted', label: 'Trusted Hardware', icon: ShieldCheck },
+    { id: 'untrusted', label: 'Untrusted / New', icon: ShieldAlert },
+  ]
 
   const columns = [
     {
@@ -105,9 +143,37 @@ export default function DevicesPage() {
       <PageHeader
         title="Enrolled Hardware & Devices"
         description="Browser fingerprints, cryptographic device cookies, and trust authorizations."
+        actions={
+          isFiltered && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClearFilters}
+              leftIcon={<X className="w-3.5 h-3.5" />}
+            >
+              Clear Filters
+            </Button>
+          )
+        }
       />
 
-      <div className="bg-paper-raised border border-line-soft rounded-[10px] p-4 shadow-sm">
+      {/* Filter & Search Hub */}
+      <div className="bg-paper-raised border border-line-soft rounded-[10px] p-4 shadow-sm space-y-4">
+        {/* Top Trust Tabs */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-line-soft pb-3">
+          <Tabs
+            tabs={filterTabs}
+            activeTab={trustFilter}
+            onChange={handleTabChange}
+            layoutId="devicesTrustTabs"
+          />
+
+          <span className="font-mono text-xs text-ink-3 self-end sm:self-center">
+            {isLoading ? 'Loading inventory...' : `${total} enrolled clients`}
+          </span>
+        </div>
+
+        {/* Search Input */}
         <div className="max-w-md">
           <label className="text-[11px] font-mono uppercase tracking-wider text-ink-3 block mb-1">
             Search Enrolled Hardware

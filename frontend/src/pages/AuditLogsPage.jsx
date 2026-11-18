@@ -8,18 +8,56 @@ import { Badge } from '@/components/ui/Badge'
 import { CopyableMono } from '@/components/ui/CopyableMono'
 import { Pagination } from '@/components/ui/Pagination'
 import { SearchInput } from '@/components/ui/SearchInput'
+import { Tabs } from '@/components/ui/Tabs'
 import { useQuery } from '@tanstack/react-query'
 import { getAuditLogs, exportAuditLogs } from '@/services/api'
 import { formatDateTime } from '@/utils/formatters'
 import { notify } from '@/components/ui/Toast'
-import { Download } from 'lucide-react'
+import {
+  Download,
+  Layers,
+  KeyRound,
+  UserCheck,
+  ShieldAlert,
+  X,
+} from 'lucide-react'
 
 export default function AuditLogsPage() {
+  const [activeTab, setActiveTab] = useState('ALL')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(25)
   const [selectedLog, setSelectedLog] = useState(null)
   const [isExporting, setIsExporting] = useState(false)
+
+  const filterTabs = [
+    { id: 'ALL', label: 'All Actions', icon: Layers },
+    { id: 'AUTH', label: 'Authentication', icon: KeyRound },
+    { id: 'USER', label: 'Identity Provisioning', icon: UserCheck },
+    { id: 'CONFIG', label: 'Policy Changes', icon: ShieldAlert },
+  ]
+
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId)
+    setPage(1)
+    if (tabId === 'ALL') {
+      setSearch('')
+    } else if (tabId === 'AUTH') {
+      setSearch('LOGIN')
+    } else if (tabId === 'USER') {
+      setSearch('USER')
+    } else if (tabId === 'CONFIG') {
+      setSearch('SETTING')
+    }
+  }
+
+  const handleClearFilters = () => {
+    setActiveTab('ALL')
+    setSearch('')
+    setPage(1)
+  }
+
+  const isFiltered = activeTab !== 'ALL' || Boolean(search)
 
   const { data, isLoading } = useQuery({
     queryKey: ['audit-logs', { search, page, pageSize }],
@@ -109,19 +147,47 @@ export default function AuditLogsPage() {
         title="Immutable Audit Ledger"
         description="Tamper-evident system activity log recording all security posture modifications and administrative changes."
         actions={
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handleExportCSV}
-            isLoading={isExporting}
-            leftIcon={<Download className="w-3.5 h-3.5" />}
-          >
-            Export CSV
-          </Button>
+          <div className="flex items-center gap-2">
+            {isFiltered && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearFilters}
+                leftIcon={<X className="w-3.5 h-3.5" />}
+              >
+                Clear Filters
+              </Button>
+            )}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleExportCSV}
+              isLoading={isExporting}
+              leftIcon={<Download className="w-3.5 h-3.5" />}
+            >
+              Export CSV
+            </Button>
+          </div>
         }
       />
 
-      <div className="bg-paper-raised border border-line-soft rounded-[10px] p-4 shadow-sm">
+      {/* Filter & Search Hub */}
+      <div className="bg-paper-raised border border-line-soft rounded-[10px] p-4 shadow-sm space-y-4">
+        {/* Top Category Tabs */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-line-soft pb-3">
+          <Tabs
+            tabs={filterTabs}
+            activeTab={activeTab}
+            onChange={handleTabChange}
+            layoutId="auditLogsTabs"
+          />
+
+          <span className="font-mono text-xs text-ink-3 self-end sm:self-center">
+            {isLoading ? 'Loading records...' : `${total} immutable records`}
+          </span>
+        </div>
+
+        {/* Search Input */}
         <div className="max-w-md">
           <label className="text-[11px] font-mono uppercase tracking-wider text-ink-3 block mb-1">
             Search Ledger
@@ -130,6 +196,7 @@ export default function AuditLogsPage() {
             value={search}
             onChange={(e) => {
               setSearch(e.target.value)
+              setActiveTab('CUSTOM')
               setPage(1)
             }}
             placeholder="Search actor email, action, or target..."

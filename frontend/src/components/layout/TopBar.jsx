@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import {
   Bell,
   LogOut,
@@ -18,9 +19,13 @@ import {
   FileText,
   Settings,
   Cpu,
+  Moon,
+  Sun,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { useTheme } from '@/context/ThemeContext'
 import { Badge } from '../ui/Badge'
+import { CommandPalette } from '../ui/CommandPalette'
 import { useQuery } from '@tanstack/react-query'
 import { getAlerts, getSystemHealth } from '@/services/api'
 import { formatRelativeTime } from '@/utils/formatters'
@@ -28,13 +33,36 @@ import { ROUTES } from '@/constants/routes'
 
 export function TopBar() {
   const { user, logout } = useAuth()
+  const { theme, toggleTheme, isDark } = useTheme()
   const navigate = useNavigate()
   const location = useLocation()
   const [alertsOpen, setAlertsOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [commandOpen, setCommandOpen] = useState(false)
   const alertsRef = useRef(null)
   const profileRef = useRef(null)
+
+  // Global keyboard shortcuts for Command Palette (⌘K or /)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const target = e.target
+      const isInput =
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setCommandOpen((prev) => !prev)
+      } else if (e.key === '/' && !isInput) {
+        e.preventDefault()
+        setCommandOpen(true)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   // Close menus on click outside
   useEffect(() => {
@@ -106,7 +134,7 @@ export function TopBar() {
 
   return (
     <header className="sticky top-0 z-20 h-16 bg-paper/90 backdrop-blur-sm border-b border-line-soft px-4 sm:px-6 flex items-center justify-between transition-colors">
-      {/* Left side: Hamburger button on mobile + Search command pill on desktop */}
+      {/* Left side: Hamburger button on mobile + Search command button */}
       <div className="flex items-center gap-2">
         <button
           type="button"
@@ -117,17 +145,32 @@ export function TopBar() {
           <Menu className="w-4 h-4" />
         </button>
 
-        <div className="hidden md:flex items-center gap-2 px-2.5 py-1 text-xs text-ink-3 bg-paper-sunken border border-line-soft rounded-[6px] hover:border-ink/40 transition-colors cursor-text">
-          <Search className="w-3.5 h-3.5 text-ink-3" />
-          <span className="font-sans">Search users, IPs, sessions...</span>
-          <kbd className="ml-3 font-mono text-[10px] bg-paper-raised px-1 py-0.2 border border-line-soft rounded text-ink-2 shadow-xs">
+        <button
+          type="button"
+          onClick={() => setCommandOpen(true)}
+          className="md:hidden p-2 rounded-[6px] text-ink-2 hover:text-ink hover:bg-paper-sunken border border-line-soft transition-colors"
+          aria-label="Open global search"
+          title="Search (⌘K)"
+        >
+          <Search className="w-4 h-4" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setCommandOpen(true)}
+          className="hidden md:flex items-center gap-2.5 px-3 py-1.5 text-xs text-ink-3 bg-paper-sunken border border-line-soft rounded-[6px] hover:border-ink/60 hover:text-ink transition-all cursor-pointer group shadow-2xs select-none"
+          title="Global search (⌘K or /)"
+        >
+          <Search className="w-3.5 h-3.5 text-ink-3 group-hover:text-ink transition-colors" />
+          <span className="font-sans">Search users, IPs, sessions, commands...</span>
+          <kbd className="ml-3 font-mono text-[10px] bg-paper-raised px-1.5 py-0.5 border border-line-soft rounded text-ink-2 group-hover:border-ink/40 transition-colors shadow-2xs">
             ⌘K
           </kbd>
-        </div>
+        </button>
       </div>
 
       {/* Right side controls */}
-      <div className="flex items-center gap-3 md:gap-4">
+      <div className="flex items-center gap-2.5 sm:gap-3 md:gap-4">
         {/* System Health Pill */}
         <div className="hidden sm:inline-flex items-center gap-2 px-2.5 py-1 rounded-[6px] bg-paper-sunken border border-line-soft text-xs">
           <span
@@ -140,12 +183,29 @@ export function TopBar() {
           </span>
         </div>
 
+        {/* Theme Toggle Button (Light Paper / Dark Obsidian) */}
+        <motion.button
+          type="button"
+          whileTap={{ scale: 0.9, rotate: 20 }}
+          whileHover={{ scale: 1.05 }}
+          onClick={toggleTheme}
+          className="p-2 rounded-[6px] text-ink-2 hover:text-ink hover:bg-paper-sunken border border-line-soft transition-colors duration-200 cursor-pointer shadow-2xs"
+          aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+          title={`Switch to ${isDark ? 'Light Paper' : 'Dark Obsidian'} theme`}
+        >
+          {isDark ? (
+            <Sun className="w-4 h-4 text-warning" />
+          ) : (
+            <Moon className="w-4 h-4 text-ink-2" />
+          )}
+        </motion.button>
+
         {/* Notifications / Alerts Bell */}
         <div className="relative" ref={alertsRef}>
           <button
             type="button"
             onClick={() => setAlertsOpen(!alertsOpen)}
-            className="relative p-2 rounded-[6px] text-ink-2 hover:text-ink hover:bg-paper-sunken border border-transparent hover:border-line-soft transition-colors"
+            className="relative p-2 rounded-[6px] text-ink-2 hover:text-ink hover:bg-paper-sunken border border-line-soft hover:border-ink/40 transition-colors shadow-2xs"
             aria-label="View notifications"
           >
             <Bell className="w-4 h-4" />
@@ -262,7 +322,7 @@ export function TopBar() {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-danger hover:bg-[#F6E2DE] rounded-[6px] transition-colors text-left font-medium"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-danger hover:bg-danger/10 rounded-[6px] transition-colors text-left font-medium"
                 >
                   <LogOut className="w-4 h-4" />
                   <span>Sign Out</span>
@@ -273,11 +333,14 @@ export function TopBar() {
         </div>
       </div>
 
+      {/* Global Command Palette Modal */}
+      <CommandPalette isOpen={commandOpen} onClose={() => setCommandOpen(false)} />
+
       {/* Mobile Navigation Drawer */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 flex md:hidden">
           <div
-            className="fixed inset-0 bg-[#161616]/40 backdrop-blur-xs"
+            className="fixed inset-0 bg-[#000000]/50 backdrop-blur-xs"
             onClick={() => setMobileMenuOpen(false)}
           />
           <div className="relative w-72 max-w-[80vw] bg-paper h-full border-r border-ink shadow-hard flex flex-col z-10 animate-in slide-in-from-left duration-200">

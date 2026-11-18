@@ -1,65 +1,66 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: ["./index.html", "./src/**/*.{js,jsx,ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        // Paper and Ink Design System
+        // Dynamic Paper and Ink Design System (CSS variable driven)
         paper: {
-          DEFAULT: '#F8F7F3',
-          raised: '#FFFFFF',
-          sunken: '#F1EFE9',
-          hover: '#EFEDE6',
+          DEFAULT: 'var(--paper)',
+          raised: 'var(--paper-raised)',
+          sunken: 'var(--paper-sunken)',
+          hover: 'var(--paper-hover)',
         },
         ink: {
-          DEFAULT: '#161616',
-          2: '#4A4A47',
-          3: '#8A8984',
+          DEFAULT: 'var(--ink)',
+          2: 'var(--ink-2)',
+          3: 'var(--ink-3)',
         },
         line: {
-          DEFAULT: '#1A1A1A',
-          soft: '#DDDAD1',
-          dashed: '#B9B6AC',
+          DEFAULT: 'var(--line)',
+          soft: 'var(--line-soft)',
+          dashed: 'var(--line-dashed)',
         },
         // Muted Editorial Semantic Colors & Tints
         success: {
-          DEFAULT: '#2F7D5B',
-          tint: '#E6F1EA',
+          DEFAULT: 'var(--success)',
+          tint: 'var(--success-tint)',
         },
         warning: {
-          DEFAULT: '#B7791F',
-          tint: '#F8EFD9',
+          DEFAULT: 'var(--warning)',
+          tint: 'var(--warning-tint)',
         },
         danger: {
-          DEFAULT: '#B3382C',
-          tint: '#F6E2DE',
+          DEFAULT: 'var(--danger)',
+          tint: 'var(--danger-tint)',
         },
         critical: {
-          DEFAULT: '#8F1D14',
-          tint: '#F1D4CF',
+          DEFAULT: 'var(--critical)',
+          tint: 'var(--critical-tint)',
         },
         info: {
-          DEFAULT: '#2F5D8A',
-          tint: '#E3ECF4',
+          DEFAULT: 'var(--info)',
+          tint: 'var(--info-tint)',
         },
         highlight: {
-          DEFAULT: '#5B4BC4',
-          tint: '#ECE9F9',
+          DEFAULT: 'var(--highlight)',
+          tint: 'var(--highlight-tint)',
         },
 
-        // Backward compatibility mappings (redirected to Paper & Ink tokens)
-        'bg-base': '#F8F7F3',
-        'bg-surface': '#FFFFFF',
-        'bg-elevated': '#F1EFE9',
-        'bg-hover': '#EFEDE6',
-        'border-subtle': '#DDDAD1',
-        'border-strong': '#1A1A1A',
-        'text-primary': '#161616',
-        'text-secondary': '#4A4A47',
-        'text-muted': '#8A8984',
-        'brand': '#161616',
-        'brand-hover': '#4A4A47',
-        'accent': '#5B4BC4',
+        // Backward compatibility mappings
+        'bg-base': 'var(--bg-base)',
+        'bg-surface': 'var(--bg-surface)',
+        'bg-elevated': 'var(--bg-elevated)',
+        'bg-hover': 'var(--bg-hover)',
+        'border-subtle': 'var(--border-subtle)',
+        'border-strong': 'var(--border-strong)',
+        'text-primary': 'var(--text-primary)',
+        'text-secondary': 'var(--text-secondary)',
+        'text-muted': 'var(--text-muted)',
+        'brand': 'var(--brand)',
+        'brand-hover': 'var(--brand-hover)',
+        'accent': 'var(--accent)',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
@@ -67,9 +68,9 @@ export default {
         mono: ['"JetBrains Mono"', 'Consolas', 'monospace'],
       },
       boxShadow: {
-        'hard': '3px 3px 0 0 #161616',
-        'hard-sm': '2px 2px 0 0 #161616',
-        'hard-lg': '4px 4px 0 0 #161616',
+        'hard': '3px 3px 0 0 var(--shadow-ink, var(--ink))',
+        'hard-sm': '2px 2px 0 0 var(--shadow-ink, var(--ink))',
+        'hard-lg': '4px 4px 0 0 var(--shadow-ink, var(--ink))',
         'none': 'none',
       },
       borderRadius: {

@@ -3,11 +3,13 @@
 @tailwind utilities;
 
 :root {
+  /* Surfaces (Warm Paper & Ink) */
   --paper: #F8F7F3;
   --paper-raised: #FFFFFF;
   --paper-sunken: #F1EFE9;
   --paper-hover: #EFEDE6;
 
+  /* Ink */
   --ink: #161616;
   --ink-2: #4A4A47;
   --ink-3: #8A8984;
@@ -29,6 +31,8 @@
   --highlight: #5B4BC4;
   --highlight-tint: #ECE9F9;
 
+  --shadow-ink: #161616;
+
   /* Backward compatibility aliases */
   --bg-base: #F8F7F3;
   --bg-surface: #FFFFFF;
@@ -44,6 +48,52 @@
   --accent: #5B4BC4;
 }
 
+.dark {
+  /* Surfaces (Dark Obsidian Paper) */
+  --paper: #0D0F12;
+  --paper-raised: #15181E;
+  --paper-sunken: #1C2028;
+  --paper-hover: #222834;
+
+  /* Ink */
+  --ink: #F3F2EE;
+  --ink-2: #B3B0A6;
+  --ink-3: #75736B;
+
+  --line: #F3F2EE;
+  --line-soft: #272C38;
+  --line-dashed: #3E4657;
+
+  --success: #48BB78;
+  --success-tint: rgba(72, 187, 120, 0.16);
+  --warning: #ED8936;
+  --warning-tint: rgba(237, 137, 54, 0.16);
+  --danger: #F56565;
+  --danger-tint: rgba(245, 101, 101, 0.16);
+  --critical: #E53E3E;
+  --critical-tint: rgba(229, 62, 62, 0.2);
+  --info: #4299E1;
+  --info-tint: rgba(66, 153, 225, 0.16);
+  --highlight: #9F7AEA;
+  --highlight-tint: rgba(159, 122, 234, 0.2);
+
+  --shadow-ink: #000000;
+
+  /* Backward compatibility aliases */
+  --bg-base: #0D0F12;
+  --bg-surface: #15181E;
+  --bg-elevated: #1C2028;
+  --bg-hover: #222834;
+  --border-subtle: #272C38;
+  --border-strong: #3E4657;
+  --text-primary: #F3F2EE;
+  --text-secondary: #B3B0A6;
+  --text-muted: #75736B;
+  --brand: #F3F2EE;
+  --brand-hover: #B3B0A6;
+  --accent: #9F7AEA;
+}
+
 @layer base {
   *, *::before, *::after {
     box-sizing: border-box;
@@ -52,7 +102,7 @@
   html {
     -webkit-text-size-adjust: 100%;
     scroll-behavior: smooth;
-    background-color: #F8F7F3;
+    background-color: var(--paper);
   }
 
   body {
@@ -64,6 +114,7 @@
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   #root {
@@ -98,7 +149,12 @@
 
   /* Selection: light ink tint */
   ::selection {
-    background: rgba(22, 22, 22, 0.12);
+    background: rgba(22, 22, 22, 0.15);
+    color: var(--ink);
+  }
+
+  .dark ::selection {
+    background: rgba(243, 242, 238, 0.25);
     color: var(--ink);
   }
 }
@@ -106,15 +162,15 @@
 @layer components {
   /* Signature hard shadow utility */
   .shadow-hard {
-    box-shadow: 3px 3px 0 0 var(--ink);
+    box-shadow: 3px 3px 0 0 var(--shadow-ink, var(--ink));
   }
 
   .shadow-hard-sm {
-    box-shadow: 2px 2px 0 0 var(--ink);
+    box-shadow: 2px 2px 0 0 var(--shadow-ink, var(--ink));
   }
 
   .shadow-hard-lg {
-    box-shadow: 4px 4px 0 0 var(--ink);
+    box-shadow: 4px 4px 0 0 var(--shadow-ink, var(--ink));
   }
 
   .border-hard {
@@ -143,7 +199,7 @@
     background: linear-gradient(
       90deg,
       transparent 0%,
-      rgba(255, 255, 255, 0.6) 50%,
+      rgba(255, 255, 255, 0.08) 50%,
       transparent 100%
     );
     animation: sweep 1.8s infinite ease-in-out;

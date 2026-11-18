@@ -31,19 +31,31 @@ Engineered with a high-craft **"Paper & Ink" editorial design system** inspired 
 
 ---
 
-## 🎨 Design System: "Paper & Ink"
+## 🎨 Design System: "Paper & Ink" with Dual Light & Dark Themes
 
-The frontend interface completely eschews generic dark-mode tropes, neon glows, and blur glassmorphism in favor of a calm, architectural, print-editorial aesthetic:
+The frontend interface delivers a calm, architectural, print-editorial aesthetic with instant, seamless switching between Light Paper and Obsidian Dark modes:
 
-- **Paper & Ink Palette:** Warm off-white surfaces (`--paper: #F8F7F3`), pure white cards (`--paper-raised: #FFFFFF`), and sunken table headers (`--paper-sunken: #F1EFE9`) paired with near-black ink typography (`--ink: #161616`).
-- **Browser-Window Motif (`WindowFrame`):** Crisp 1px borders, a title bar with three 6px unfilled ink dots, and a signature hard offset shadow (`3px 3px 0 0 #161616`).
+- **Dual-Theme Engine (Light & Dark Obsidian):**
+  - **Light Paper:** Warm off-white surfaces (`#F8F7F3`), crisp white cards (`#FFFFFF`), and sunken table headers (`#F1EFE9`) with near-black ink typography (`#161616`).
+  - **Dark Obsidian:** High-contrast obsidian paper surfaces (`#0D0F12`), lifted cards (`#15181E`), and sunken toolbars (`#1C2029`) paired with crisp parchment ink typography (`#F3F2EE`).
+  - **Instant Keyboard / Nav Toggle:** Switch anytime via the Sun/Moon button in the TopBar or via `⌘T` in the Command Palette.
+- **Global Command Palette (`⌘K` / `/`):**
+  - Omnibar modal with categorized search tabs: `All Results`, `Navigation`, `Quick Actions`, `Identities`, and `Incidents`.
+  - Arrow key navigation, instant Enter execution, ESC dismissal, and Framer Motion spring physics.
+- **Organized Segmented Search & Triage Tabs:**
+  - **Authentication Ledger (`/logins`):** Quick filter tabs (`All Logins`, `High Risk`, `Step-up MFA`, `Blocked Attacks`, `Synthetic Tests`) with dynamic sliding active pill animations (`Tabs.jsx`).
+  - **Security Alerts (`/alerts`):** Triage status tabs (`All Incidents`, `Open Triage`, `In Review`, `Resolved`, `False Positive`) paired with quick severity chips.
+  - **Identity Directory (`/users`):** Segmented role tabs (`All Accounts`, `Administrators`, `Security Analysts`, `Standard Users`).
+  - **Hardware Inventory (`/devices`):** Trust status tabs (`All Clients`, `Trusted Hardware`, `Untrusted / New`).
+  - **Immutable Audit Ledger (`/audit`):** Action category tabs with CSV export.
+- **Browser-Window Motif (`WindowFrame`):** Crisp borders, title bar with three 6px unfilled dots, and a signature hard offset shadow (`3px 3px 0 0 var(--shadow-ink)`).
 - **Editorial Typography:** Display Serif (`Instrument Serif` / `Fraunces`) for H1 headers and KPI metrics; Technical Sans (`Inter`) for data density; Tabular Monospace (`JetBrains Mono`) for IPs, UUIDs, and telemetry scores.
 - **Muted Semantic Palette:** WCAG AA-compliant tints:
-  - **ALLOW / Low Risk:** `#2F7D5B` on `#E6F1EA`
-  - **REQUIRE MFA / Medium Risk:** `#B7791F` on `#F8EFD9`
-  - **BLOCK / High Risk:** `#B3382C` on `#F6E2DE`
-  - **Critical Anomaly:** `#8F1D14` on `#F1D4CF`
-- **Original Vector Art:** Custom line-drawn vector illustrations including the Security Analyst at laptop, 3-tier architectural evaluation planes, scanning radar loaders, and blueprint empty states.
+  - **ALLOW / Low Risk:** `#2F7D5B` on `#E6F1EA` (Light) / `#2F7D5B` on `#16281E` (Dark)
+  - **REQUIRE MFA / Medium Risk:** `#B7791F` on `#F8EFD9` (Light) / `#B7791F` on `#2A2010` (Dark)
+  - **BLOCK / High Risk:** `#B3382C` on `#F6E2DE` (Light) / `#B3382C` on `#2C1412` (Dark)
+  - **Critical Anomaly:** `#8F1D14` on `#F1D4CF` (Light) / `#8F1D14` on `#321110` (Dark)
+- **Original Vector Art & Micro-Animations:** Custom line-drawn vector illustrations, morphing tabs, interactive hover cards, and scanning radar loaders.
 
 ---
 
