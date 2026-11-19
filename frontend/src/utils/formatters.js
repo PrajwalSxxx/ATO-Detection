@@ -1,32 +1,73 @@
-import { format, formatDistanceToNow, parseISO, isValid } from 'date-fns'
+import { formatDistanceToNow, isValid } from 'date-fns'
 
 /**
- * Format a date string or Date object
+ * Safely parse any date value (ISO UTC string, SQLite naive timestamp, or Date)
+ * into a valid UTC Date object.
  */
-export function formatDate(date, fmt = 'MMM d, yyyy') {
-  if (!date) return '—'
-  const d = typeof date === 'string' ? parseISO(date) : date
-  if (!isValid(d)) return '—'
-  return format(d, fmt)
+export function parseDateUTC(date) {
+  if (!date) return null
+  if (date instanceof Date) return isValid(date) ? date : null
+  let s = String(date).trim()
+  if (!s) return null
+  // If string does not contain an explicit offset or Z indicator, treat as UTC
+  if (!s.endsWith('Z') && !s.includes('+') && !/[-+]\d{2}:\d{2}$/.test(s)) {
+    s = s.replace(' ', 'T') + 'Z'
+  }
+  const d = new Date(s)
+  return isNaN(d.getTime()) ? null : d
 }
 
 /**
- * Format a date with time
+ * Format date in Asia/Kolkata timezone (e.g. "20 Nov 2026")
+ */
+export function formatDate(date) {
+  const d = parseDateUTC(date)
+  if (!d) return '—'
+  return new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(d)
+}
+
+/**
+ * Format full date and time in Asia/Kolkata (IST) timezone
+ * Example: "20 Nov 2026, 12:27:18 am IST"
  */
 export function formatDateTime(date) {
-  if (!date) return '—'
-  const d = typeof date === 'string' ? parseISO(date) : date
-  if (!isValid(d)) return '—'
-  return format(d, 'MMM d, yyyy HH:mm:ss')
+  const d = parseDateUTC(date)
+  if (!d) return '—'
+  const formatted = new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+  }).format(d)
+  return `${formatted} IST`
 }
 
 /**
- * Format relative time (e.g. "2 hours ago")
+ * Format in UTC ISO format for SOC technical audit inspection
+ * Example: "2026-11-19T18:57:18Z"
+ */
+export function formatDateTimeUTC(date) {
+  const d = parseDateUTC(date)
+  if (!d) return '—'
+  return d.toISOString()
+}
+
+/**
+ * Format relative time (e.g. "2 minutes ago", "3 hours ago")
+ * Accurately calculates elapsed time from UTC baseline.
  */
 export function formatRelativeTime(date) {
-  if (!date) return '—'
-  const d = typeof date === 'string' ? parseISO(date) : date
-  if (!isValid(d)) return '—'
+  const d = parseDateUTC(date)
+  if (!d) return '—'
   return formatDistanceToNow(d, { addSuffix: true })
 }
 

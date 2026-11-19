@@ -43,6 +43,61 @@ def parse_telemetry(
     os_name = ua.os.family or "Unknown"
     os_version = ua.os.version_string or "0"
 
+    # Refine browser identification if user_agents returned generic/other
+    ua_lower = user_agent_string.lower()
+    if browser_name in ("Unknown", "Other") or not browser_name:
+        import re
+        if "edg/" in ua_lower:
+            browser_name = "Edge"
+            m = re.search(r"edg/([\d.]+)", ua_lower)
+            if m:
+                browser_version = m.group(1)
+        elif "chrome/" in ua_lower and "chromium" not in ua_lower:
+            browser_name = "Chrome"
+            m = re.search(r"chrome/([\d.]+)", ua_lower)
+            if m:
+                browser_version = m.group(1)
+        elif "firefox/" in ua_lower:
+            browser_name = "Firefox"
+            m = re.search(r"firefox/([\d.]+)", ua_lower)
+            if m:
+                browser_version = m.group(1)
+        elif "safari/" in ua_lower and "chrome/" not in ua_lower:
+            browser_name = "Safari"
+            m = re.search(r"version/([\d.]+)", ua_lower)
+            if m:
+                browser_version = m.group(1)
+        elif "curl/" in ua_lower:
+            browser_name = "curl"
+            m = re.search(r"curl/([\d.]+)", ua_lower)
+            if m:
+                browser_version = m.group(1)
+        elif "python" in ua_lower:
+            browser_name = "Python Requests"
+
+    # Refine OS identification if generic
+    if os_name in ("Unknown", "Other") or not os_name:
+        import re
+        if "windows nt 10.0" in ua_lower or "windows nt 11.0" in ua_lower:
+            os_name = "Windows"
+            os_version = "10/11"
+        elif "windows nt" in ua_lower:
+            os_name = "Windows"
+        elif "mac os x" in ua_lower or "macintosh" in ua_lower:
+            os_name = "Mac OS X"
+            m = re.search(r"mac os x ([\d_]+)", ua_lower)
+            if m:
+                os_version = m.group(1).replace("_", ".")
+        elif "android" in ua_lower:
+            os_name = "Android"
+            m = re.search(r"android ([\d.]+)", ua_lower)
+            if m:
+                os_version = m.group(1)
+        elif "iphone" in ua_lower or "ipad" in ua_lower:
+            os_name = "iOS"
+        elif "linux" in ua_lower:
+            os_name = "Linux"
+
     if client_device_category:
         device_type = client_device_category.lower()
     elif ua.is_bot:

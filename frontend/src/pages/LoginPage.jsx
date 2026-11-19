@@ -25,6 +25,7 @@ import { WindowFrame } from '@/components/ui/WindowFrame'
 import { ROUTES } from '@/constants/routes'
 import { notify } from '@/components/ui/Toast'
 import { getDeviceFingerprint } from '@/utils/fingerprint'
+import { discoverClientPublicIP } from '@/utils/ipDiscovery'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -59,12 +60,20 @@ export default function LoginPage() {
         console.warn('Device fingerprint collection note:', fpErr)
       }
 
+      let discoveredIP = null
+      try {
+        discoveredIP = await discoverClientPublicIP()
+      } catch (ipErr) {
+        // Safe to ignore
+      }
+
       const payload = {
         ...formData,
         ...(fpData ? {
           device_fingerprint: fpData.fingerprint,
           device_category: fpData.deviceCategory,
         } : {}),
+        ...(discoveredIP ? { client_reported_ip: discoveredIP } : {}),
       }
 
       const response = await login(payload)

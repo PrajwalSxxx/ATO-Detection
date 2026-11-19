@@ -1,5 +1,5 @@
 """System health, version, and ML control API routes."""
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -10,7 +10,34 @@ from app.ml.model_registry import model_registry
 router = APIRouter(prefix="/system", tags=["system"])
 
 
-@router.get("/health")
+@router.get("/client-ip")
+def get_client_ip_info(request: Request):
+    """
+    Client IP discovery endpoint.
+    In local development, discovers the active public WAN / VPN exit IP if requested.
+    """
+    from app.core.ip_resolver import resolve_client_ip
+    info = resolve_client_ip(request)
+
+    discovered_public_ip = None
+    if info.is_loopback and getattr(settings, "DEV_PUBLIC_IP_DISCOVERY", True):
+        import httpx
+        try:
+            with httpx.Client(timeout=2.5) as client:
+                res = client.get("https://api64.ipify.org?format=json")
+                if res.status_code == 200:
+                    discovered_public_ip = res.json().get("ip")
+        except Exception:
+            discovered_public_ip = None
+
+    return {
+        "ip": info.ip,
+        "source": info.source,
+        "trust_status": info.trust_status,
+        "is_public": info.is_public,
+        "is_loopback": info.is_loopback,
+        "discovered_public_ip": discovered_public_ip,
+    }
 def health_check(db: Session = Depends(get_db_session)):
     """Health check endpoint for container probes and monitoring."""
     db_ok = False

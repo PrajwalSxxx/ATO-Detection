@@ -29,16 +29,15 @@ from app.schemas.auth import (
 from app.services.adaptive_auth_service import create_mfa_challenge, verify_mfa_challenge
 from app.services.auth_service import process_login
 from app.services.audit_service import write_audit_log
+from app.core.ip_resolver import resolve_client_ip
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 def _get_client_ip(request: Request) -> str:
-    """Get the client's real IP address from headers or connection."""
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "127.0.0.1"
+    """Get the client's real IP address from headers or connection using topology-aware resolver."""
+    info = resolve_client_ip(request)
+    return info.ip
 
 
 @router.post("/register", response_model=RegisterResponse)
@@ -190,17 +189,19 @@ def login(
     db: Session = Depends(get_db_session),
 ):
     """Authenticate user with adaptive risk-based authentication."""
-    ip = _get_client_ip(request)
+    client_ip_info = resolve_client_ip(request, client_reported_ip=body.client_reported_ip)
     ua = request.headers.get("User-Agent", "Unknown")
 
     result = process_login(
         db,
         body.email,
         body.password,
-        ip,
+        client_ip_info.ip,
         ua,
         device_fingerprint=body.device_fingerprint,
         device_category=body.device_category,
+        ip_source=client_ip_info.source,
+        ip_trust_status=client_ip_info.trust_status,
     )
 
     user = db.query(User).filter(User.id == result["user_id"]).first()

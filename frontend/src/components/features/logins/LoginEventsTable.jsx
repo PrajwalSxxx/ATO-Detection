@@ -41,61 +41,151 @@ export function LoginEventsTable({
     {
       key: 'ip_address',
       label: 'IP Address',
-      render: (val, row) => (
-        <CopyableMono text={val || row.ip || '—'} />
-      ),
+      render: (val, row) => {
+        const ip = val || row.ip || '—'
+        const isClientReported = row.ip_source === 'client_reported' || row.ip_trust_status === 'unverified'
+        const isLoopback = row.ip_source === 'loopback' || ip === '127.0.0.1' || ip === '::1'
+        const isProxy = row.ip_source === 'trusted_proxy'
+
+        return (
+          <div className="flex flex-col gap-1 items-start">
+            <CopyableMono text={ip} />
+            <div className="flex items-center gap-1">
+              {isClientReported && (
+                <span
+                  title="IP reported by client browser in local development mode — unverified for automated security blocks"
+                  className="px-1.5 py-0.2 rounded text-[9px] font-mono font-medium uppercase bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/25"
+                >
+                  DEV REPORTED
+                </span>
+              )}
+              {isLoopback && !isClientReported && (
+                <span
+                  title="Loopback connection from local machine"
+                  className="px-1.5 py-0.2 rounded text-[9px] font-mono font-medium uppercase bg-slate-500/10 text-slate-700 dark:text-slate-300 border border-slate-500/25"
+                >
+                  LOOPBACK
+                </span>
+              )}
+              {isProxy && (
+                <span
+                  title="Resolved through configured trusted proxy"
+                  className="px-1.5 py-0.2 rounded text-[9px] font-mono font-medium uppercase bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/25"
+                >
+                  TRUSTED PROXY
+                </span>
+              )}
+              {!isClientReported && !isLoopback && !isProxy && ip !== '—' && (
+                <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-medium uppercase bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25">
+                  DIRECT
+                </span>
+              )}
+            </div>
+          </div>
+        )
+      },
     },
     {
       key: 'location',
       label: 'Location / Network',
-      render: (val, row) => (
-        <div className="flex flex-col gap-0.5">
-          <span className="text-xs text-text-secondary truncate max-w-[130px] block font-mono">
-            {val || (row.city ? `${row.city}, ${row.country || ''}` : 'Unknown')}
-          </span>
-          <div className="flex items-center gap-1 flex-wrap">
-            {row.is_tor && (
-              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase bg-red-600 text-white">
-                TOR
-              </span>
-            )}
-            {row.is_vpn && !row.is_tor && (
-              <span className="px-1.5 py-0.2 rounded text-[9px] font-medium uppercase bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30">
-                VPN
-              </span>
-            )}
-            {row.is_proxy && !row.is_vpn && !row.is_tor && (
-              <span className="px-1.5 py-0.2 rounded text-[9px] font-medium uppercase bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-                PROXY
-              </span>
-            )}
-            {row.impossible_travel && (
-              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase bg-rose-600 text-white">
-                TRAVEL
-              </span>
-            )}
+      render: (val, row) => {
+        let locationText = val
+        if (!locationText) {
+          if (row.geo_status === 'local_network') {
+            locationText = 'Local Network'
+          } else if (row.geo_status === 'unavailable') {
+            locationText = 'Lookup Unavailable'
+          } else if (row.city) {
+            locationText = `${row.city}${row.country ? `, ${row.country}` : ''}`
+          } else if (row.country) {
+            locationText = row.country
+          } else {
+            locationText = 'Unknown'
+          }
+        }
+
+        const isTor = row.is_tor || row.tor_status === 'confirmed'
+        const isConfirmedVpn = row.vpn_status === 'confirmed'
+        const isSuspectedVpn = row.vpn_status === 'suspected' || (!isConfirmedVpn && row.is_vpn)
+        const isProxy = row.is_proxy || row.proxy_status === 'confirmed'
+        const isDatacenter = row.is_datacenter && !row.is_vpn && !isTor
+
+        return (
+          <div className="flex flex-col gap-0.5">
+            <span className="text-xs text-text-secondary truncate max-w-[140px] block font-mono">
+              {locationText}
+            </span>
+            <div className="flex items-center gap-1 flex-wrap">
+              {isTor && (
+                <span className="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase bg-red-600 text-white">
+                  TOR
+                </span>
+              )}
+              {isConfirmedVpn && !isTor && (
+                <span
+                  title="Confirmed commercial VPN exit node"
+                  className="px-1.5 py-0.2 rounded text-[9px] font-semibold uppercase bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30"
+                >
+                  VPN
+                </span>
+              )}
+              {isSuspectedVpn && !isConfirmedVpn && !isTor && (
+                <span
+                  title="Datacenter/Hosting provider IP indicating potential VPN tunnel"
+                  className="px-1.5 py-0.2 rounded text-[9px] font-medium uppercase bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20"
+                >
+                  HOSTING/VPN
+                </span>
+              )}
+              {isProxy && !row.is_vpn && !isTor && (
+                <span className="px-1.5 py-0.2 rounded text-[9px] font-medium uppercase bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                  PROXY
+                </span>
+              )}
+              {isDatacenter && (
+                <span className="px-1.5 py-0.2 rounded text-[9px] font-medium uppercase bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20">
+                  DATACENTER
+                </span>
+              )}
+              {row.impossible_travel && (
+                <span className="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase bg-rose-600 text-white">
+                  TRAVEL
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-      ),
+        )
+      },
     },
     {
       key: 'client',
       label: 'Device & Client',
-      render: (_, row) => (
-        <div className="flex flex-col gap-0.5">
-          <div className="flex items-center gap-1.5 text-xs text-text-secondary whitespace-nowrap">
-            <span>{row.browser || 'Browser'} / {row.os || 'OS'}</span>
-            {row.is_new_device && (
-              <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold uppercase bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-                NEW
-              </span>
+      render: (_, row) => {
+        const browserLabel = row.browser && row.browser !== 'Unknown'
+          ? `${row.browser}${row.browser_version ? ` ${row.browser_version}` : ''}`
+          : 'Browser'
+        const osLabel = row.os && row.os !== 'Unknown'
+          ? `${row.os}${row.os_version ? ` ${row.os_version}` : ''}`
+          : 'OS'
+
+        return (
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center gap-1.5 text-xs text-text-secondary whitespace-nowrap">
+              <span className="font-medium text-text-primary">{browserLabel}</span>
+              <span className="text-text-muted">/</span>
+              <span>{osLabel}</span>
+              {row.is_new_device && (
+                <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold uppercase bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                  NEW
+                </span>
+              )}
+            </div>
+            {row.device_category && (
+              <span className="text-[10px] text-text-muted capitalize">{row.device_category}</span>
             )}
           </div>
-          {row.device_category && (
-            <span className="text-[10px] text-text-muted capitalize">{row.device_category}</span>
-          )}
-        </div>
-      ),
+        )
+      },
     },
     {
       key: 'risk_score',

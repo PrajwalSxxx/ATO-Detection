@@ -109,6 +109,7 @@ export const getSystemHealth = () => {
 // ─── Logins ────────────────────────────────────────────────────────────────
 export const getLogins = (params) => api.get('/logins', { params })
 export const getLoginDetail = (id) => api.get(`/logins/${id}`)
+export const refreshLoginEventIP = (id) => api.post(`/logins/${id}/refresh-ip`)
 export const simulateLogin = (data) => api.post('/logins/simulate', data)
 
 // ─── Risk ──────────────────────────────────────────────────────────────────

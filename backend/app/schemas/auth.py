@@ -8,6 +8,7 @@ class LoginRequest(BaseModel):
     password: str
     device_fingerprint: Optional[str] = None
     device_category: Optional[str] = None
+    client_reported_ip: Optional[str] = None
 
     @field_validator("password")
     @classmethod
@@ -25,6 +26,13 @@ class LoginResponse(BaseModel):
     user_id: str
     email: str
     role: str
+    ip_address: Optional[str] = None
+    ip_source: Optional[str] = None
+    ip_trust_status: Optional[str] = None
+    browser: Optional[str] = None
+    os: Optional[str] = None
+    country: Optional[str] = None
+    city: Optional[str] = None
     access_token: Optional[str] = None
     token_type: Optional[str] = None
     mfa_required: Optional[bool] = None

@@ -339,24 +339,36 @@ def get_live_security_events(
             except Exception:
                 reasons_list = []
 
+        created_at_utc = evt.created_at
+        if created_at_utc and created_at_utc.tzinfo is None:
+            created_at_utc = created_at_utc.replace(tzinfo=timezone.utc)
+        ts_str = created_at_utc.astimezone(timezone.utc).isoformat().replace("+00:00", "Z") if created_at_utc else ""
+
         events.append({
             "type": "login_event",
             "event_id": evt.id,
             "user_id": evt.user_id,
             "email": user.email if user else "unknown",
             "role": user.role if user else "user",
-            "timestamp": evt.created_at.isoformat() if evt.created_at else "",
+            "timestamp": ts_str,
             "ip_address": evt.ip_address,
+            "ip_source": getattr(evt, "ip_source", "direct"),
+            "ip_trust_status": getattr(evt, "ip_trust_status", "verified"),
             "device": {
                 "fingerprint": evt.fingerprint_hash,
-                "browser": None,
-                "os": None,
+                "browser": getattr(evt, "browser", None) or "Unknown",
+                "browser_version": getattr(evt, "browser_version", None) or "0",
+                "os": getattr(evt, "os", None) or "Unknown",
+                "os_version": getattr(evt, "os_version", None) or "0",
                 "category": getattr(evt, "device_category", None) or "desktop",
                 "is_new": bool(evt.is_new_device),
             },
             "location": {
                 "country": evt.country,
+                "region": evt.region,
                 "city": evt.city,
+                "geo_provider": getattr(evt, "geo_provider", None),
+                "geo_status": getattr(evt, "geo_status", None),
                 "prev_country": getattr(evt, "prev_country", None),
                 "prev_city": getattr(evt, "prev_city", None),
                 "distance_km": getattr(evt, "geo_distance_km", None),
@@ -365,11 +377,16 @@ def get_live_security_events(
             },
             "threats": {
                 "is_vpn": bool(getattr(evt, "is_vpn", False)),
+                "vpn_status": getattr(evt, "vpn_status", "not_detected"),
                 "is_proxy": bool(getattr(evt, "is_proxy", False)),
+                "proxy_status": getattr(evt, "proxy_status", "not_detected"),
                 "is_tor": bool(getattr(evt, "is_tor", False)),
+                "tor_status": getattr(evt, "tor_status", "not_detected"),
                 "is_datacenter": bool(getattr(evt, "is_datacenter", False)),
+                "datacenter_status": getattr(evt, "datacenter_status", "not_detected"),
                 "isp": getattr(evt, "isp", None),
                 "asn": getattr(evt, "asn", None),
+                "provider": getattr(evt, "geo_provider", None),
             },
             "mfa": {
                 "required": bool(evt.mfa_required),
@@ -384,5 +401,6 @@ def get_live_security_events(
                 "reasons": reasons_list,
                 "ml_anomaly_score": risk.ml_anomaly_score if risk else 0.0,
             },
+            "is_simulated": bool(getattr(evt, "is_simulated", False)),
         })
     return events

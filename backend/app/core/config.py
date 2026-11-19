@@ -45,9 +45,11 @@ class Settings(BaseSettings):
     # IP Intelligence & Geolocation
     IP_INTELLIGENCE_PROVIDER: str = "ip-api"  # ip-api, ipinfo, ipdata, mock
     IP_INTELLIGENCE_API_KEY: str = ""
-    IP_INTELLIGENCE_TIMEOUT_SECONDS: float = 3.0
+    IP_INTELLIGENCE_TIMEOUT_SECONDS: float = 5.0
     IP_INTELLIGENCE_CACHE_TTL_SECONDS: int = 3600  # 1 hour
     TRUSTED_PROXIES: List[str] = ["127.0.0.1", "::1"]
+    DEV_PUBLIC_IP_DISCOVERY: bool = True
+    PUBLIC_IP_DISCOVERY_URL: str = "https://api64.ipify.org?format=json"
 
     # SMS Service
     SMS_PROVIDER: str = "mock"  # mock, twilio, fast2sms

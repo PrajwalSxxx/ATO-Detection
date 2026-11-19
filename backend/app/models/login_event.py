@@ -14,8 +14,16 @@ class LoginEvent(Base):
     
     # Request metadata
     ip_address = Column(String(45), nullable=False)
+    ip_source = Column(String(30), default="direct", nullable=False)  # direct, trusted_proxy, client_reported, loopback_dev
+    ip_trust_status = Column(String(30), default="verified", nullable=False)  # verified, unverified, loopback
     user_agent = Column(Text, nullable=True)
     fingerprint_hash = Column(String(64), nullable=True)
+
+    # Client & Browser telemetry
+    browser = Column(String(100), nullable=True)
+    browser_version = Column(String(50), nullable=True)
+    os = Column(String(100), nullable=True)
+    os_version = Column(String(50), nullable=True)
     
     # Geo info
     country = Column(String(100), nullable=True)
@@ -23,6 +31,8 @@ class LoginEvent(Base):
     city = Column(String(100), nullable=True)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
+    geo_provider = Column(String(50), nullable=True)  # ip-api, mock, local, unavailable
+    geo_status = Column(String(30), nullable=True)    # success, local_network, failed, simulated, unavailable
     
     # Outcome
     success = Column(Boolean, nullable=False, default=False)
@@ -41,9 +51,13 @@ class LoginEvent(Base):
 
     # IP Intelligence & Threat indicators
     is_vpn = Column(Boolean, default=False, nullable=False)
+    vpn_status = Column(String(30), default="not_detected", nullable=False)  # confirmed, suspected, not_detected, unavailable
     is_proxy = Column(Boolean, default=False, nullable=False)
+    proxy_status = Column(String(30), default="not_detected", nullable=False)  # detected, not_detected, unavailable
     is_tor = Column(Boolean, default=False, nullable=False)
+    tor_status = Column(String(30), default="not_detected", nullable=False)  # detected, not_detected, unavailable
     is_datacenter = Column(Boolean, default=False, nullable=False)
+    datacenter_status = Column(String(30), default="not_detected", nullable=False)  # detected, not_detected, unavailable
     isp = Column(String(150), nullable=True)
     asn = Column(String(100), nullable=True)
 
@@ -52,6 +66,9 @@ class LoginEvent(Base):
     prev_city = Column(String(100), nullable=True)
     geo_distance_km = Column(Float, default=0.0, nullable=True)
     impossible_travel = Column(Boolean, default=False, nullable=False)
+
+    # Simulation flag
+    is_simulated = Column(Boolean, default=False, nullable=False)
     
     # Timestamps
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False, index=True)

@@ -68,8 +68,12 @@ def get_login_event_detail(
     risk = db.query(RiskAssessment).filter(RiskAssessment.login_event_id == event_id).first()
 
     import json
+    from datetime import timezone
     risk_dict = None
     if risk:
+        created_at_utc = risk.created_at
+        if created_at_utc and created_at_utc.tzinfo is None:
+            created_at_utc = created_at_utc.replace(tzinfo=timezone.utc)
         risk_dict = {
             "id": risk.id,
             "risk_score": risk.risk_score,
@@ -79,21 +83,36 @@ def get_login_event_detail(
             "confidence": risk.confidence,
             "reasons": json.loads(risk.reasons) if risk.reasons else [],
             "features_snapshot": json.loads(risk.features_snapshot) if risk.features_snapshot else {},
-            "created_at": risk.created_at.isoformat() if risk.created_at else None,
+            "created_at": created_at_utc.astimezone(timezone.utc).isoformat().replace("+00:00", "Z") if created_at_utc else None,
         }
+
+    evt_created_at = event.created_at
+    if evt_created_at and evt_created_at.tzinfo is None:
+        evt_created_at = evt_created_at.replace(tzinfo=timezone.utc)
+    evt_created_at_str = evt_created_at.astimezone(timezone.utc).isoformat().replace("+00:00", "Z") if evt_created_at else None
 
     return {
         "event": {
             "id": event.id,
             "user_id": event.user_id,
             "ip_address": event.ip_address,
+            "ip_source": getattr(event, "ip_source", "direct"),
+            "ip_trust_status": getattr(event, "ip_trust_status", "verified"),
             "user_agent": event.user_agent,
             "fingerprint_hash": event.fingerprint_hash,
+            "browser": getattr(event, "browser", "Unknown"),
+            "browser_version": getattr(event, "browser_version", "0"),
+            "os": getattr(event, "os", "Unknown"),
+            "os_version": getattr(event, "os_version", "0"),
             "country": event.country,
             "region": event.region,
             "city": event.city,
             "latitude": event.latitude,
             "longitude": event.longitude,
+            "geo_provider": getattr(event, "geo_provider", None),
+            "geo_status": getattr(event, "geo_status", None),
+            "isp": getattr(event, "isp", None),
+            "asn": getattr(event, "asn", None),
             "success": event.success,
             "failure_reason": event.failure_reason,
             "mfa_required": event.mfa_required,
@@ -102,17 +121,69 @@ def get_login_event_detail(
             "mfa_delivery_status": getattr(event, "mfa_delivery_status", None),
             "device_category": getattr(event, "device_category", None),
             "is_vpn": getattr(event, "is_vpn", False),
-            "is_tor": getattr(event, "is_tor", False),
+            "vpn_status": getattr(event, "vpn_status", "not_detected"),
             "is_proxy": getattr(event, "is_proxy", False),
+            "proxy_status": getattr(event, "proxy_status", "not_detected"),
+            "is_tor": getattr(event, "is_tor", False),
+            "tor_status": getattr(event, "tor_status", "not_detected"),
+            "is_datacenter": getattr(event, "is_datacenter", False),
+            "datacenter_status": getattr(event, "datacenter_status", "not_detected"),
             "prev_country": getattr(event, "prev_country", None),
             "prev_city": getattr(event, "prev_city", None),
             "geo_distance_km": getattr(event, "geo_distance_km", 0.0),
             "impossible_travel": getattr(event, "impossible_travel", False),
             "is_new_device": event.is_new_device,
             "is_new_ip": event.is_new_ip,
-            "created_at": event.created_at.isoformat() if event.created_at else None,
+            "is_simulated": getattr(event, "is_simulated", False),
+            "created_at": evt_created_at_str,
         },
         "risk_assessment": risk_dict,
+    }
+
+
+@router.post("/{event_id}/refresh-ip")
+def refresh_login_event_ip(
+    event_id: str,
+    db: Session = Depends(get_db_session),
+    _auth=Depends(analyst_or_admin_required),
+):
+    """Re-query live IP intelligence bypassing cache for an audited login event."""
+    event = db.query(LoginEvent).filter(LoginEvent.id == event_id).first()
+    if not event:
+        raise ResourceNotFoundError("Login event not found")
+
+    from app.services.ip_intelligence_service import get_ip_intelligence
+    fresh = get_ip_intelligence(
+        event.ip_address,
+        bypass_cache=True,
+        is_simulation=getattr(event, "is_simulated", False),
+    )
+
+    event.country = fresh.country
+    event.region = fresh.region
+    event.city = fresh.city
+    event.latitude = fresh.latitude
+    event.longitude = fresh.longitude
+    event.isp = fresh.isp
+    event.asn = fresh.asn
+    event.is_vpn = fresh.is_vpn
+    event.vpn_status = fresh.vpn_status
+    event.is_proxy = fresh.is_proxy
+    event.proxy_status = fresh.proxy_status
+    event.is_tor = fresh.is_tor
+    event.tor_status = fresh.tor_status
+    event.is_datacenter = fresh.is_datacenter
+    event.datacenter_status = fresh.datacenter_status
+    event.geo_provider = fresh.provider
+    event.geo_status = fresh.geo_status
+
+    db.add(event)
+    db.commit()
+    db.refresh(event)
+    return {
+        "message": "IP intelligence successfully refreshed",
+        "event_id": event.id,
+        "geo": fresh.to_dict(),
     }
 
 
@@ -176,6 +247,9 @@ def simulate_login(
         user_agent=user_agent,
         device_fingerprint=device_fingerprint,
         device_category=device_category,
+        ip_source="simulated",
+        ip_trust_status="simulated",
+        is_simulation=True,
     )
     return {
         "simulation": True,

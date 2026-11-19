@@ -5,12 +5,12 @@ from app.services.ip_intelligence_service import get_ip_intelligence, clear_ip_i
 from app.utils.geo_utils import haversine_distance
 
 
-def get_geo(ip_address: str) -> dict:
+def get_geo(ip_address: str, bypass_cache: bool = False, is_simulation: bool = False) -> dict:
     """
     Get geographic and threat intelligence for an IP address.
     Routes to IP intelligence service with provider selection, caching, and offline fallbacks.
     """
-    result = get_ip_intelligence(ip_address)
+    result = get_ip_intelligence(ip_address, bypass_cache=bypass_cache, is_simulation=is_simulation)
     return result.to_dict()
 
 

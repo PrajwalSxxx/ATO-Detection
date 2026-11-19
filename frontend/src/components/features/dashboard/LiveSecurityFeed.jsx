@@ -19,7 +19,7 @@ import {
   Phone,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
-import { formatDistanceToNow } from 'date-fns'
+import { formatDateTime, formatRelativeTime } from '@/utils/formatters'
 
 export function LiveSecurityFeed({
   events = [],
@@ -232,8 +232,15 @@ export function LiveSecurityFeed({
                           </span>
                         )}
                       </div>
-                      <div className="text-[11px] text-ink-3 font-mono">
-                        {evt.device?.category || 'desktop'} • {evt.ip_address}
+                      <div className="text-[11px] text-ink-3 font-mono flex items-center gap-1.5 flex-wrap">
+                        <span>{evt.device?.browser || evt.device?.category || 'Browser'} / {evt.device?.os || 'OS'}</span>
+                        <span className="text-ink-3/50">•</span>
+                        <span>{evt.ip_address}</span>
+                        {(evt.ip_source === 'client_reported' || evt.ip_trust_status === 'unverified') && (
+                          <span className="px-1 py-0.2 rounded text-[8px] font-mono uppercase bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/25">
+                            DEV
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -250,7 +257,11 @@ export function LiveSecurityFeed({
                         </div>
                       ) : (
                         <div className="font-mono text-[11px] text-ink">
-                          {evt.location?.city ? `${evt.location.city}, ` : ''}{evt.location?.country || 'Unknown'}
+                          {evt.location?.geo_status === 'local_network'
+                            ? 'Local Network'
+                            : evt.location?.geo_status === 'unavailable'
+                            ? 'Lookup Unavailable'
+                            : `${evt.location?.city ? `${evt.location.city}, ` : ''}${evt.location?.country || 'Unknown'}`}
                         </div>
                       )}
                       {evt.location?.distance_km > 0 && (
@@ -268,12 +279,17 @@ export function LiveSecurityFeed({
                         TOR EXIT NODE
                       </span>
                     )}
-                    {isVpn && (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-medium uppercase tracking-wider bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30">
+                    {evt.threats?.vpn_status === 'confirmed' && !isTor && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase tracking-wider bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30">
+                        CONFIRMED VPN
+                      </span>
+                    )}
+                    {(evt.threats?.vpn_status === 'suspected' || (isVpn && evt.threats?.vpn_status !== 'confirmed')) && !isTor && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-medium uppercase tracking-wider bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
                         VPN
                       </span>
                     )}
-                    {isProxy && (
+                    {isProxy && !isVpn && !isTor && (
                       <span className="px-2 py-0.5 rounded text-[10px] font-mono font-medium uppercase tracking-wider bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
                         PROXY
                       </span>
@@ -306,8 +322,11 @@ export function LiveSecurityFeed({
                           {riskScore}
                         </Badge>
                       </div>
-                      <div className="text-[10px] text-ink-3 font-mono mt-0.5">
-                        {evt.timestamp ? formatDistanceToNow(new Date(evt.timestamp), { addSuffix: true }) : 'just now'}
+                      <div
+                        className="text-[10px] text-ink-3 font-mono mt-0.5 cursor-help"
+                        title={evt.timestamp ? formatDateTime(evt.timestamp) : ''}
+                      >
+                        {evt.timestamp ? formatRelativeTime(evt.timestamp) : 'just now'}
                       </div>
                     </div>
                     {getDecisionBadge(evt.risk?.decision)}
@@ -329,6 +348,18 @@ export function LiveSecurityFeed({
                           Device Intelligence
                         </p>
                         <div className="text-[11px] font-mono space-y-1">
+                          <div>
+                            <span className="text-ink-3">Browser: </span>
+                            <span className="text-ink font-semibold">
+                              {evt.device?.browser || 'Unknown'} {evt.device?.browser_version ? `v${evt.device.browser_version}` : ''}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-ink-3">OS: </span>
+                            <span className="text-ink font-semibold">
+                              {evt.device?.os || 'Unknown'} {evt.device?.os_version ? `v${evt.device.os_version}` : ''}
+                            </span>
+                          </div>
                           <div>
                             <span className="text-ink-3">Fingerprint: </span>
                             <span className="text-ink break-all font-mono text-[10px]">
@@ -368,6 +399,10 @@ export function LiveSecurityFeed({
                             <span className="text-ink">{evt.ip_address}</span>
                           </div>
                           <div>
+                            <span className="text-ink-3">Time (IST): </span>
+                            <span className="text-ink font-semibold">{formatDateTime(evt.timestamp)}</span>
+                          </div>
+                          <div>
                             <span className="text-ink-3">ISP / Org: </span>
                             <span className="text-ink">{evt.threats?.isp || 'Standard Network'}</span>
                           </div>
@@ -378,7 +413,7 @@ export function LiveSecurityFeed({
                           <div>
                             <span className="text-ink-3">Anonymizer: </span>
                             <span className="text-ink">
-                              {evt.threats?.is_tor ? 'Confirmed Tor Exit Node' : evt.threats?.is_vpn ? 'VPN Tunnel Detected' : evt.threats?.is_proxy ? 'Proxy Server' : 'None Detected'}
+                              {evt.threats?.is_tor ? 'Confirmed Tor Exit Node' : evt.threats?.vpn_status === 'confirmed' ? 'Confirmed Commercial VPN' : evt.threats?.is_vpn ? 'VPN Tunnel Detected' : evt.threats?.is_proxy ? 'Proxy Server' : 'None Detected'}
                             </span>
                           </div>
                         </div>

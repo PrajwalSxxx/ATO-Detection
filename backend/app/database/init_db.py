@@ -49,6 +49,53 @@ def _migrate_schema() -> None:
                     if col_name not in existing_cols:
                         conn.execute(text(f"ALTER TABLE login_events ADD COLUMN {col_name} {col_def}"))
 
+                # Check and add telemetry, client IP, and threat status columns
+                additional_login_cols = [
+                    ("browser", "VARCHAR(100)"),
+                    ("browser_version", "VARCHAR(50)"),
+                    ("os", "VARCHAR(100)"),
+                    ("os_version", "VARCHAR(50)"),
+                    ("ip_source", "VARCHAR(30) DEFAULT 'direct' NOT NULL"),
+                    ("ip_trust_status", "VARCHAR(30) DEFAULT 'verified' NOT NULL"),
+                    ("geo_provider", "VARCHAR(50)"),
+                    ("geo_status", "VARCHAR(30)"),
+                    ("vpn_status", "VARCHAR(30) DEFAULT 'not_detected' NOT NULL"),
+                    ("proxy_status", "VARCHAR(30) DEFAULT 'not_detected' NOT NULL"),
+                    ("tor_status", "VARCHAR(30) DEFAULT 'not_detected' NOT NULL"),
+                    ("datacenter_status", "VARCHAR(30) DEFAULT 'not_detected' NOT NULL"),
+                    ("is_simulated", "BOOLEAN DEFAULT 0 NOT NULL"),
+                ]
+                for col_name, col_def in additional_login_cols:
+                    if col_name not in existing_cols:
+                        conn.execute(text(f"ALTER TABLE login_events ADD COLUMN {col_name} {col_def}"))
+
+                # Backfill existing records that have user_agent but missing browser / os
+                try:
+                    from user_agents import parse as ua_parse
+                    rows = conn.execute(text("SELECT id, user_agent, ip_address, is_vpn, is_tor, is_proxy, is_datacenter FROM login_events WHERE browser IS NULL AND user_agent IS NOT NULL")).fetchall()
+                    for r in rows:
+                        row_id, raw_ua, ip_addr, is_vpn, is_tor, is_proxy, is_dc = r[0], r[1], r[2], r[3], r[4], r[5], r[6]
+                        p = ua_parse(raw_ua or "")
+                        b_name = p.browser.family or "Unknown"
+                        b_ver = p.browser.version_string or "0"
+                        o_name = p.os.family or "Unknown"
+                        o_ver = p.os.version_string or "0"
+                        cat = "mobile" if p.is_mobile else "tablet" if p.is_tablet else "desktop"
+                        ip_src = "loopback_dev" if ip_addr in ("127.0.0.1", "::1", "localhost") else "direct"
+                        ip_trust = "loopback" if ip_addr in ("127.0.0.1", "::1", "localhost") else "verified"
+                        vpn_st = "confirmed" if (is_vpn and (is_tor or is_proxy)) else "suspected" if (is_vpn or is_dc) else "not_detected"
+
+                        conn.execute(
+                            text(
+                                "UPDATE login_events SET browser = :b, browser_version = :bv, os = :o, os_version = :ov, "
+                                "device_category = COALESCE(device_category, :cat), ip_source = :src, ip_trust_status = :trust, "
+                                "vpn_status = :vst WHERE id = :id"
+                            ),
+                            {"b": b_name, "bv": b_ver, "o": o_name, "ov": o_ver, "cat": cat, "src": ip_src, "trust": ip_trust, "vst": vpn_st, "id": row_id}
+                        )
+                except Exception as bf_err:
+                    print(f"[init_db] Note on telemetry backfill: {bf_err}")
+
             # Check users table
             user_cols_res = conn.execute(text("PRAGMA table_info(users)")).fetchall()
             if user_cols_res:
