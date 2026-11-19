@@ -28,12 +28,23 @@ def create_alert_for_risk(
         "high": "HIGH_RISK_LOGIN",
     }
 
-    # Check for impossible travel
+    # Check for specific threat factors
     has_impossible_travel = any(r.factor == "impossible_travel" for r in risk_result.reasons)
+    has_tor = any(r.factor == "tor_exit_node" for r in risk_result.reasons)
+    has_new_device_combo = any(r.factor == "new_device_country_combo" for r in risk_result.reasons)
+
     if has_impossible_travel:
         alert_type = "IMPOSSIBLE_TRAVEL"
         title = "Impossible Travel Detected"
-        description = "A login was detected from a location that cannot be reached in the time since the last login."
+        description = "A login was detected from a location that cannot be physically reached in the time since the last login."
+    elif has_tor:
+        alert_type = "TOR_EXIT_NODE_DETECTED"
+        title = "Tor Exit Node Anonymizer Detected"
+        description = "A login attempt routing through a known Tor exit node or darknet anonymizer was detected."
+    elif has_new_device_combo:
+        alert_type = "NEW_DEVICE_LOCATION_ANOMALY"
+        title = "New Device in Unfamiliar Country"
+        description = "A login from a completely new device hardware fingerprint in an unfamiliar geographical region."
     elif risk_result.level == "critical":
         alert_type = "CRITICAL_RISK_LOGIN"
         title = f"Critical Risk Login Detected (score: {risk_result.score:.0f})"

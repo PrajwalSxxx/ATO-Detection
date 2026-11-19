@@ -23,6 +23,7 @@ class DeviceAnalysis:
     os_name: str
     is_trusted: bool
     login_count: int
+    device_category: str = "desktop"
 
 
 def get_or_create_device(
@@ -68,6 +69,7 @@ def get_or_create_device(
             os_name=existing.os_name or telemetry.os_name,
             is_trusted=existing.is_trusted,
             login_count=existing.login_count,
+            device_category=existing.device_type or telemetry.device_type,
         )
     else:
         # Create new device
@@ -100,4 +102,5 @@ def get_or_create_device(
             os_name=telemetry.os_name,
             is_trusted=False,
             login_count=1,
+            device_category=telemetry.device_type,
         )

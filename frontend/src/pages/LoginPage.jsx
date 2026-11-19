@@ -20,6 +20,7 @@ import { LoginHeroIllustration } from '@/assets/illustrations/LoginHeroIllustrat
 import { WindowFrame } from '@/components/ui/WindowFrame'
 import { ROUTES } from '@/constants/routes'
 import { notify } from '@/components/ui/Toast'
+import { getDeviceFingerprint } from '@/utils/fingerprint'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -46,7 +47,22 @@ export default function LoginPage() {
     setIsLoading(true)
     setServerError('')
     try {
-      const response = await login(formData)
+      let fpData = null
+      try {
+        fpData = await getDeviceFingerprint()
+      } catch (fpErr) {
+        console.warn('Device fingerprint collection note:', fpErr)
+      }
+
+      const payload = {
+        ...formData,
+        ...(fpData ? {
+          device_fingerprint: fpData.fingerprint,
+          device_category: fpData.deviceCategory,
+        } : {}),
+      }
+
+      const response = await login(payload)
 
       // Normalize decision returned by API (case-insensitive)
       const rawDecision = String(response.decision || (response.access_token ? 'ALLOW' : 'REQUIRE_MFA')).toUpperCase()

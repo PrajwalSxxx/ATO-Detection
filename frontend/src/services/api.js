@@ -93,6 +93,7 @@ export const getDashboardActivity = (range = '24h') => {
   })
 }
 export const getRiskDistribution = () => api.get('/dashboard/risk-distribution')
+export const getLiveSecurityEvents = (limit = 30) => api.get('/dashboard/live-events', { params: { limit } })
 export const getSystemHealth = () => {
   return api.get('/system/health').catch((err) => {
     if (err.response?.status === 404) {

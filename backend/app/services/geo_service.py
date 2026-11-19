@@ -1,29 +1,17 @@
-"""Geo service: cached IP-to-geo lookups using mock provider."""
+"""Geo service: cached IP-to-geo lookups integrated with IP intelligence."""
 from __future__ import annotations
 from typing import Optional
-from app.utils.geo_utils import get_geo_for_ip, haversine_distance
-
-_GEO_CACHE: dict[str, dict] = {}
-_MAX_CACHE_SIZE = 1000
+from app.services.ip_intelligence_service import get_ip_intelligence, clear_ip_intelligence_cache
+from app.utils.geo_utils import haversine_distance
 
 
 def get_geo(ip_address: str) -> dict:
     """
-    Get geographic information for an IP address.
-    Results are cached in memory (LRU-like with max size).
+    Get geographic and threat intelligence for an IP address.
+    Routes to IP intelligence service with provider selection, caching, and offline fallbacks.
     """
-    if ip_address in _GEO_CACHE:
-        return _GEO_CACHE[ip_address]
-
-    geo = get_geo_for_ip(ip_address)
-
-    # Evict oldest entries if at capacity
-    if len(_GEO_CACHE) >= _MAX_CACHE_SIZE:
-        oldest_key = next(iter(_GEO_CACHE))
-        del _GEO_CACHE[oldest_key]
-
-    _GEO_CACHE[ip_address] = geo
-    return geo
+    result = get_ip_intelligence(ip_address)
+    return result.to_dict()
 
 
 def compute_distance_km(
@@ -39,5 +27,5 @@ def compute_distance_km(
 
 
 def clear_cache() -> None:
-    """Clear the geo cache (useful for testing)."""
-    _GEO_CACHE.clear()
+    """Clear the geo and IP intelligence caches."""
+    clear_ip_intelligence_cache()

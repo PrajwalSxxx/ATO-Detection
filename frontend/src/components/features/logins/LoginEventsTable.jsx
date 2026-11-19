@@ -47,20 +47,54 @@ export function LoginEventsTable({
     },
     {
       key: 'location',
-      label: 'Location',
+      label: 'Location / Network',
       render: (val, row) => (
-        <span className="text-xs text-text-secondary truncate max-w-[120px] block">
-          {val || (row.city ? `${row.city}, ${row.country || ''}` : 'Unknown')}
-        </span>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-xs text-text-secondary truncate max-w-[130px] block font-mono">
+            {val || (row.city ? `${row.city}, ${row.country || ''}` : 'Unknown')}
+          </span>
+          <div className="flex items-center gap-1 flex-wrap">
+            {row.is_tor && (
+              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase bg-red-600 text-white">
+                TOR
+              </span>
+            )}
+            {row.is_vpn && !row.is_tor && (
+              <span className="px-1.5 py-0.2 rounded text-[9px] font-medium uppercase bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30">
+                VPN
+              </span>
+            )}
+            {row.is_proxy && !row.is_vpn && !row.is_tor && (
+              <span className="px-1.5 py-0.2 rounded text-[9px] font-medium uppercase bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                PROXY
+              </span>
+            )}
+            {row.impossible_travel && (
+              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase bg-rose-600 text-white">
+                TRAVEL
+              </span>
+            )}
+          </div>
+        </div>
       ),
     },
     {
       key: 'client',
-      label: 'Browser / OS',
+      label: 'Device & Client',
       render: (_, row) => (
-        <span className="text-xs text-text-secondary whitespace-nowrap">
-          {row.browser || 'Browser'} / {row.os || 'OS'}
-        </span>
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-1.5 text-xs text-text-secondary whitespace-nowrap">
+            <span>{row.browser || 'Browser'} / {row.os || 'OS'}</span>
+            {row.is_new_device && (
+              <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold uppercase bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                NEW
+              </span>
+            )}
+          </div>
+          {row.device_category && (
+            <span className="text-[10px] text-text-muted capitalize">{row.device_category}</span>
+          )}
+        </div>
       ),
     },
     {

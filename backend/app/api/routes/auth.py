@@ -47,7 +47,15 @@ def login(
     ip = _get_client_ip(request)
     ua = request.headers.get("User-Agent", "Unknown")
 
-    result = process_login(db, body.email, body.password, ip, ua)
+    result = process_login(
+        db,
+        body.email,
+        body.password,
+        ip,
+        ua,
+        device_fingerprint=body.device_fingerprint,
+        device_category=body.device_category,
+    )
 
     user = db.query(User).filter(User.id == result["user_id"]).first()
     if user:

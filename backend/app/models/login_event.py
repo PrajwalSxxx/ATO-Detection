@@ -35,6 +35,21 @@ class LoginEvent(Base):
     # Device flags
     is_new_device = Column(Boolean, default=False, nullable=False)
     is_new_ip = Column(Boolean, default=False, nullable=False)
+    device_category = Column(String(50), nullable=True)  # desktop, mobile, tablet
+
+    # IP Intelligence & Threat indicators
+    is_vpn = Column(Boolean, default=False, nullable=False)
+    is_proxy = Column(Boolean, default=False, nullable=False)
+    is_tor = Column(Boolean, default=False, nullable=False)
+    is_datacenter = Column(Boolean, default=False, nullable=False)
+    isp = Column(String(150), nullable=True)
+    asn = Column(String(100), nullable=True)
+
+    # Location comparison & travel
+    prev_country = Column(String(100), nullable=True)
+    prev_city = Column(String(100), nullable=True)
+    geo_distance_km = Column(Float, default=0.0, nullable=True)
+    impossible_travel = Column(Boolean, default=False, nullable=False)
     
     # Timestamps
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False, index=True)

@@ -20,10 +20,19 @@ class TelemetryData:
     is_bot: bool
     fingerprint_hash: str
     raw_ua: str
+    device_category: str = "desktop"
+    client_fingerprint: Optional[str] = None
 
 
-def parse_telemetry(user_agent_string: Optional[str]) -> TelemetryData:
-    """Parse a User-Agent string and extract device/browser telemetry."""
+def parse_telemetry(
+    user_agent_string: Optional[str],
+    client_fingerprint: Optional[str] = None,
+    client_device_category: Optional[str] = None,
+) -> TelemetryData:
+    """
+    Parse a User-Agent string and combine with client-side entropy
+    to extract device/browser telemetry and produce a robust fingerprint.
+    """
     if not user_agent_string:
         user_agent_string = "unknown"
 
@@ -34,7 +43,9 @@ def parse_telemetry(user_agent_string: Optional[str]) -> TelemetryData:
     os_name = ua.os.family or "Unknown"
     os_version = ua.os.version_string or "0"
 
-    if ua.is_bot:
+    if client_device_category:
+        device_type = client_device_category.lower()
+    elif ua.is_bot:
         device_type = "bot"
     elif ua.is_mobile:
         device_type = "mobile"
@@ -45,9 +56,16 @@ def parse_telemetry(user_agent_string: Optional[str]) -> TelemetryData:
     else:
         device_type = "other"
 
-    # Generate fingerprint from stable attributes
-    fingerprint_raw = f"{browser_name}|{os_name}|{device_type}"
-    fingerprint_hash = hashlib.sha256(fingerprint_raw.encode()).hexdigest()
+    # Multi-layered fingerprint strategy:
+    # If client-side cryptographic fingerprint is present, bind it with server-side UA attributes.
+    # If not present (e.g. API clients, bots), derive from UA entropy components.
+    if client_fingerprint and client_fingerprint.strip():
+        fingerprint_raw = f"{client_fingerprint.strip()}|{browser_name}|{os_name}|{device_type}"
+    else:
+        # Fallback server-derived entropy
+        fingerprint_raw = f"{user_agent_string}|{browser_name}|{os_name}|{device_type}"
+
+    fingerprint_hash = hashlib.sha256(fingerprint_raw.encode("utf-8")).hexdigest()
 
     return TelemetryData(
         browser_name=browser_name,
@@ -55,10 +73,12 @@ def parse_telemetry(user_agent_string: Optional[str]) -> TelemetryData:
         os_name=os_name,
         os_version=os_version,
         device_type=device_type,
-        is_mobile=ua.is_mobile,
-        is_tablet=ua.is_tablet,
-        is_pc=ua.is_pc,
-        is_bot=ua.is_bot,
+        device_category=device_type,
+        client_fingerprint=client_fingerprint,
+        is_mobile=ua.is_mobile or device_type == "mobile",
+        is_tablet=ua.is_tablet or device_type == "tablet",
+        is_pc=ua.is_pc or device_type == "desktop",
+        is_bot=ua.is_bot or device_type == "bot",
         fingerprint_hash=fingerprint_hash,
         raw_ua=user_agent_string,
     )

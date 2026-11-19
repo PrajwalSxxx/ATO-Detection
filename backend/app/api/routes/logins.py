@@ -125,15 +125,38 @@ def simulate_login(
     if email.startswith("user") and password == "Admin@SecurePass123":
         password = "User@SecurePass123"
 
-    ip_address = body.ip_address or "198.51.100.45"
+    import uuid
+    ip_address = body.ip_address or "103.21.244.2"
     user_agent = body.user_agent or "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0"
+    device_fingerprint = getattr(body, "device_fingerprint", None)
+    device_category = getattr(body, "device_category", None)
 
-    if body.scenario in (7, "impossible_travel"):
+    if body.scenario in (1, "scenario_1", "normal", "normal_login"):
         ip_address = "103.21.244.2"
-        user_agent = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148"
+        user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        device_category = "desktop"
+        device_fingerprint = "trusted_corporate_workstation_fp_001"
+    elif body.scenario in (2, "scenario_2", "new_device"):
+        ip_address = "103.21.244.2"
+        user_agent = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1"
+        device_category = "mobile"
+        device_fingerprint = f"new_iphone_fp_{uuid.uuid4().hex[:12]}"
+    elif body.scenario in (3, "scenario_3", "vpn", "vpn_location"):
+        # Germany VPN datacenter IP
+        ip_address = "185.220.101.4"
+        user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0"
+        device_category = "desktop"
+        device_fingerprint = "trusted_corporate_workstation_fp_001"
+    elif body.scenario in (4, "scenario_4", "suspicious_ato", "tor_ato", 7, "impossible_travel"):
+        # Tor Exit Node with new Android device
+        ip_address = "185.220.101.5"
+        user_agent = "Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6261.90 Mobile Safari/537.36"
+        device_category = "mobile"
+        device_fingerprint = f"attacker_tor_device_{uuid.uuid4().hex[:12]}"
     elif body.scenario in (6, "credential_stuffing"):
         ip_address = "185.220.101.5"
         user_agent = "curl/7.88.1"
+        device_category = "desktop"
 
     result = process_login(
         db=db,
@@ -141,6 +164,8 @@ def simulate_login(
         password=password,
         ip_address=ip_address,
         user_agent=user_agent,
+        device_fingerprint=device_fingerprint,
+        device_category=device_category,
     )
     return {
         "simulation": True,

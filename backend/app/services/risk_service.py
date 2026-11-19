@@ -32,15 +32,19 @@ class RiskResult:
 
 
 _DEFAULT_WEIGHTS = {
-    "ml_anomaly_signal": 30,
+    "ml_anomaly_signal": 25,
     "new_device": 15,
     "new_ip_subnet": 10,
     "failed_attempts_recent": 15,
     "unusual_hour": 8,
     "location_change": 12,
-    "impossible_travel": 15,
+    "impossible_travel": 25,
     "browser_os_change": 5,
     "deviation_baseline": 2,
+    "vpn_detected": 15,
+    "tor_detected": 30,
+    "proxy_detected": 15,
+    "datacenter_ip": 10,
 }
 
 
@@ -132,22 +136,27 @@ def compute_risk_score(
             description=f"Login at unusual hour (outside 06:00-22:00)",
         ))
 
-    # 6. Location change (12 or 15 if impossible travel)
+    # 6. Location change & Impossible Travel
     if features.impossible_travel_flag:
         pts = weights["impossible_travel"]
         score += pts
+        speed_desc = f" ({features.calculated_speed_kmh:.0f} km/h)" if getattr(features, 'calculated_speed_kmh', 0) > 0 else ""
+        time_desc = f" in {features.travel_time_hours*60:.0f} mins" if getattr(features, 'travel_time_hours', 0) > 0 else " in <2 hours"
+        from_loc = f"{features.prev_city}, {features.prev_country}" if features.prev_country else "Last login"
+        to_loc = f"{features.current_city or features.current_country}, {features.current_country}"
         reasons.append(RiskReason(
             factor="impossible_travel",
             points=pts,
-            description=f"Impossible travel detected: {features.geo_distance_km:.0f} km in <2 hours",
+            description=f"Impossible travel detected: {from_loc} to {to_loc} ({features.geo_distance_km:.0f} km{time_desc}{speed_desc})",
         ))
     elif features.country_changed:
         pts = weights["location_change"]
         score += pts
+        prev = f" (previous: {features.prev_country})" if getattr(features, 'prev_country', None) else ""
         reasons.append(RiskReason(
             factor="location_change",
             points=pts,
-            description=f"Login from new country: {features.current_country}",
+            description=f"Login from new country: {features.current_country}{prev}",
         ))
     elif features.geo_distance_km > 500:
         pts = weights["location_change"] * 0.5
@@ -158,7 +167,42 @@ def compute_risk_score(
             description=f"Login from unusual location: {features.geo_distance_km:.0f} km from last known location",
         ))
 
-    # 7. Browser/OS change (5 pts)
+    # 7. Threat Intelligence: Tor, VPN, Proxy, Datacenter
+    if getattr(features, "is_tor", False):
+        pts = weights.get("tor_detected", 30)
+        score += pts
+        reasons.append(RiskReason(
+            factor="tor_exit_node",
+            points=pts,
+            description="Confirmed Tor exit node / darknet anonymizer network",
+        ))
+    elif getattr(features, "is_vpn", False):
+        pts = weights.get("vpn_detected", 15)
+        score += pts
+        reasons.append(RiskReason(
+            factor="vpn_detected",
+            points=pts,
+            description=f"Commercial or private VPN connection detected ({getattr(features, 'isp', 'VPN Service')})",
+        ))
+    elif getattr(features, "is_proxy", False):
+        pts = weights.get("proxy_detected", 15)
+        score += pts
+        reasons.append(RiskReason(
+            factor="proxy_detected",
+            points=pts,
+            description="Public or forwarding proxy detected",
+        ))
+
+    if getattr(features, "is_datacenter", False) and not getattr(features, "is_tor", False):
+        pts = weights.get("datacenter_ip", 10)
+        score += pts
+        reasons.append(RiskReason(
+            factor="datacenter_hosting",
+            points=pts,
+            description=f"Hosting / cloud datacenter IP space ({getattr(features, 'isp', 'Cloud ASN')})",
+        ))
+
+    # 8. Browser/OS change (5 pts)
     if features.browser_changed or features.os_changed:
         pts = weights["browser_os_change"]
         score += pts
@@ -173,7 +217,7 @@ def compute_risk_score(
             description=f"Changed {' and '.join(changed_parts)} from known baseline",
         ))
 
-    # 8. Deviation from baseline (up to 2 pts)
+    # 9. Deviation from baseline (up to 2 pts)
     if features.deviation_from_baseline > 0.5:
         pts = _clamp(features.deviation_from_baseline * weights["deviation_baseline"], 0, weights["deviation_baseline"])
         score += pts
@@ -184,7 +228,13 @@ def compute_risk_score(
         ))
 
     # --- Trust reductions ---
-    if not features.is_new_device and not features.is_new_ip_subnet and not features.is_unusual_hour:
+    if (
+        not features.is_new_device
+        and not features.is_new_ip_subnet
+        and not features.is_unusual_hour
+        and not getattr(features, "is_vpn", False)
+        and not getattr(features, "is_tor", False)
+    ):
         reduction = 5.0
         score = max(0.0, score - reduction)
         reasons.append(RiskReason(

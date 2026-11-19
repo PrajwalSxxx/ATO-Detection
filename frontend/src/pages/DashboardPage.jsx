@@ -27,6 +27,8 @@ import { LoginEventsTable } from '@/components/features/logins/LoginEventsTable'
 import { LoginEventDrawer } from '@/components/features/logins/LoginEventDrawer'
 import { StatusBadge } from '@/components/ui/Badge'
 import { SecurityAnalystIllustration } from '@/assets/illustrations/SecurityAnalystIllustration'
+import { LiveSecurityFeed } from '@/components/features/dashboard/LiveSecurityFeed'
+import { useSecurityEventStream } from '@/hooks/useSecurityEventStream'
 import { useDashboard } from '@/hooks/useDashboard'
 import { useAlerts } from '@/hooks/useAlerts'
 import { ROUTES } from '@/constants/routes'
@@ -48,6 +50,13 @@ export default function DashboardPage() {
     refetchAll,
   } = useDashboard(activityRange)
 
+  // Real-time security event stream via WebSocket with fallback polling
+  const {
+    events: liveEvents,
+    status: wsStatus,
+    refresh: refreshLiveEvents,
+  } = useSecurityEventStream({ maxEvents: 30 })
+
   // Critical alerts query
   const { alerts: criticalAlerts } = useAlerts({ severity: 'critical', limit: 4 })
 
@@ -61,6 +70,7 @@ export default function DashboardPage() {
 
   const handleManualRefresh = () => {
     refetchAll()
+    refreshLiveEvents()
     setSecondsAgo(0)
   }
 
@@ -344,6 +354,13 @@ export default function DashboardPage() {
           </WindowFrame>
         </div>
       </div>
+
+      {/* Real-Time Security Event Stream Feed */}
+      <LiveSecurityFeed
+        events={liveEvents}
+        status={wsStatus}
+        onRefresh={refreshLiveEvents}
+      />
 
       {/* Bottom: Recent Login Events Table */}
       <WindowFrame

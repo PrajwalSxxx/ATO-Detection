@@ -180,11 +180,40 @@ export function LoginEventDrawer({ isOpen, onClose, event }) {
 
             <div className="flex items-center justify-between">
               <span className="text-ink-2 flex items-center gap-1.5">
+                <Smartphone className="w-4 h-4 text-ink-3" />
+                Device Category:
+              </span>
+              <span className="text-ink font-medium capitalize">
+                {event.device_category || 'Desktop'} ({event.is_new_device ? 'New Device' : 'Known Device'})
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-ink-2 flex items-center gap-1.5">
+                <Globe className="w-4 h-4 text-ink-3" />
+                Threat Intelligence:
+              </span>
+              <span className="text-ink font-medium">
+                {event.is_tor ? 'Tor Exit Node' : event.is_vpn ? 'VPN Detected' : event.is_proxy ? 'Proxy' : 'Clean / Normal'}
+              </span>
+            </div>
+
+            {event.prev_city && event.city && event.prev_city !== event.city && (
+              <div className="flex items-center justify-between pt-1 border-t border-line-soft">
+                <span className="text-ink-3">Location Change:</span>
+                <span className="text-ink font-mono text-[11px]">
+                  {event.prev_city} ➔ {event.city} ({Math.round(event.geo_distance_km || 0)} km)
+                </span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between">
+              <span className="text-ink-2 flex items-center gap-1.5">
                 <KeyRound className="w-4 h-4 text-ink-3" />
                 Device Fingerprint:
               </span>
               <CopyableMono
-                text={event.device_id || event.device_fingerprint || '—'}
+                text={event.fingerprint_hash || event.device_id || event.device_fingerprint || '—'}
                 truncateLength={16}
               />
             </div>

@@ -48,3 +48,5 @@ class SimulateLoginRequest(BaseModel):
     failed_attempts_last_hour: Optional[int] = 0
     impossible_travel: Optional[bool] = False
     location: Optional[str] = None
+    device_fingerprint: Optional[str] = None
+    device_category: Optional[str] = None

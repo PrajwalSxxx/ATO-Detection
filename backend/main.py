@@ -1,6 +1,8 @@
 """Main FastAPI application entrypoint."""
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends
+from typing import Optional
+import asyncio
+from fastapi import FastAPI, Depends, WebSocket, WebSocketDisconnect, Query
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -8,6 +10,7 @@ from slowapi.errors import RateLimitExceeded
 from app.core.config import settings
 from app.core.exceptions import setup_exception_handlers
 from app.core.rate_limit import limiter
+from app.core.websocket_manager import ws_manager
 from app.database.init_db import init_db
 from app.database.seed import seed_database
 from app.ml.model_registry import model_registry
@@ -32,6 +35,11 @@ async def lifespan(app: FastAPI):
     init_db()
     seed_database()
     model_registry.load_model()
+
+    try:
+        ws_manager.set_loop(asyncio.get_running_loop())
+    except RuntimeError:
+        pass
 
     if not model_registry.model_loaded:
         print("[startup] ML model not found. Training model now...")
@@ -106,3 +114,29 @@ def api_health(db=Depends(system.get_db_session)):
 def api_ml_model_info():
     """ML model information meeting spec section 6.1."""
     return model_registry.health()
+
+
+@app.websocket("/api/ws/security-events")
+@app.websocket("/ws/security-events")
+async def websocket_security_events(
+    websocket: WebSocket,
+    token: Optional[str] = Query(None),
+):
+    """
+    Real-time authenticated security event notification channel for Admin Dashboard.
+    Requires admin or analyst JWT token passed via ?token= parameter.
+    """
+    user_payload = await ws_manager.connect(websocket, token)
+    if not user_payload:
+        return
+
+    try:
+        while True:
+            # Handle client heartbeats
+            data = await websocket.receive_text()
+            if data == "ping":
+                await websocket.send_text("pong")
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket)
+    except Exception:
+        ws_manager.disconnect(websocket)

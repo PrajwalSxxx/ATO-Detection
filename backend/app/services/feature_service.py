@@ -45,12 +45,24 @@ class FeatureVector:
 
     # Cold-start flag (not a feature but metadata)
     low_history: bool = False
-    # Current context
+    # Current context & threat intelligence metadata
     current_country: Optional[str] = None
+    current_city: Optional[str] = None
     current_lat: Optional[float] = None
     current_lon: Optional[float] = None
     current_ip: Optional[str] = None
     current_subnet: Optional[str] = None
+    prev_country: Optional[str] = None
+    prev_city: Optional[str] = None
+    calculated_speed_kmh: float = 0.0
+    travel_time_hours: float = 0.0
+    is_vpn: bool = False
+    is_proxy: bool = False
+    is_tor: bool = False
+    is_datacenter: bool = False
+    threat_level: str = "none"
+    isp: Optional[str] = None
+    asn: Optional[str] = None
 
 
 def _to_utc(dt: Optional[datetime]) -> Optional[datetime]:
@@ -154,26 +166,47 @@ def compute_features(
     known_subnets = {get_subnet_24(e.ip_address) for e in historical}
     is_new_ip_subnet = int(current_subnet not in known_subnets)
 
-    # --- Geo / location ---
+    # --- Geo / location & IP Intelligence ---
     current_country = geo.get("country", "Unknown")
+    current_city = geo.get("city", "Unknown")
     current_lat = geo.get("latitude", 0.0)
     current_lon = geo.get("longitude", 0.0)
 
-    # Country change
-    known_countries = {e.country for e in historical if e.country}
-    country_changed = int(bool(known_countries) and current_country not in known_countries)
+    # IP Intelligence signals
+    is_vpn = bool(geo.get("is_vpn", False))
+    is_proxy = bool(geo.get("is_proxy", False))
+    is_tor = bool(geo.get("is_tor", False))
+    is_datacenter = bool(geo.get("is_datacenter", False))
+    threat_level = str(geo.get("threat_level", "none"))
+    isp = geo.get("isp")
+    asn = geo.get("asn")
 
-    # Geo distance from last login
+    # Country change
+    known_countries = {e.country for e in historical if e.country and e.country not in ("Unknown", "Local Network")}
+    country_changed = int(bool(known_countries) and current_country not in known_countries and current_country not in ("Unknown", "Local Network"))
+
+    # Geo distance from last login & velocity analysis
     geo_distance_km = 0.0
     impossible_travel_flag = 0
-    if last_login and last_login.latitude and last_login.longitude:
+    calculated_speed_kmh = 0.0
+    travel_time_hours = 0.0
+    prev_country = last_login.country if last_login else None
+    prev_city = last_login.city if last_login else None
+
+    if last_login and last_login.latitude and last_login.longitude and current_lat and current_lon:
         geo_distance_km = compute_distance_km(
             last_login.latitude, last_login.longitude, current_lat, current_lon
         )
-        # Impossible travel: > 1000 km in < 2 hours
-        time_gap_h = (now - _to_utc(last_login.created_at)).total_seconds() / 3600
-        if geo_distance_km > 1000 and time_gap_h < 2:
+        time_gap_seconds = max((now - _to_utc(last_login.created_at)).total_seconds(), 1.0)
+        travel_time_hours = time_gap_seconds / 3600.0
+        calculated_speed_kmh = (geo_distance_km / travel_time_hours) if travel_time_hours > 0 else 0.0
+
+        # Impossible travel: > 500 km and speed > 800 km/h (commercial aircraft speed limit)
+        if geo_distance_km > 500 and calculated_speed_kmh > 800:
             impossible_travel_flag = 1
+    elif last_login and prev_country and current_country and prev_country != current_country and prev_country not in ("Unknown", "Local Network"):
+        # Country changed without valid coordinates
+        country_changed = 1
 
     # --- Time features ---
     hour = now.hour
@@ -228,8 +261,20 @@ def compute_features(
         deviation_from_baseline=deviation_from_baseline,
         low_history=low_history,
         current_country=current_country,
+        current_city=current_city,
         current_lat=current_lat,
         current_lon=current_lon,
         current_ip=ip_address,
         current_subnet=current_subnet,
+        prev_country=prev_country,
+        prev_city=prev_city,
+        calculated_speed_kmh=calculated_speed_kmh,
+        travel_time_hours=travel_time_hours,
+        is_vpn=is_vpn,
+        is_proxy=is_proxy,
+        is_tor=is_tor,
+        is_datacenter=is_datacenter,
+        threat_level=threat_level,
+        isp=isp,
+        asn=asn,
     )

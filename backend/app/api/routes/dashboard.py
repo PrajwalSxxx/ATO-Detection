@@ -308,3 +308,74 @@ def get_hourly_activity(
         )
         for row in events
     ]
+
+
+@router.get("/live-events")
+def get_live_security_events(
+    limit: int = 30,
+    db: Session = Depends(get_db_session),
+    _auth=Depends(analyst_or_admin_required),
+):
+    """
+    Fallback polling endpoint for real-time security events when WebSocket is unavailable.
+    Returns latest login events joined with risk assessments and users.
+    """
+    rows = (
+        db.query(LoginEvent, RiskAssessment, User)
+        .outerjoin(RiskAssessment, LoginEvent.id == RiskAssessment.login_event_id)
+        .outerjoin(User, LoginEvent.user_id == User.id)
+        .order_by(LoginEvent.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    events = []
+    for evt, risk, user in rows:
+        reasons_list = []
+        if risk and risk.reasons:
+            try:
+                reasons_list = json.loads(risk.reasons) if isinstance(risk.reasons, str) else risk.reasons
+            except Exception:
+                reasons_list = []
+
+        events.append({
+            "type": "login_event",
+            "event_id": evt.id,
+            "user_id": evt.user_id,
+            "email": user.email if user else "unknown",
+            "role": user.role if user else "user",
+            "timestamp": evt.created_at.isoformat() if evt.created_at else "",
+            "ip_address": evt.ip_address,
+            "device": {
+                "fingerprint": evt.fingerprint_hash,
+                "browser": None,
+                "os": None,
+                "category": getattr(evt, "device_category", None) or "desktop",
+                "is_new": bool(evt.is_new_device),
+            },
+            "location": {
+                "country": evt.country,
+                "city": evt.city,
+                "prev_country": getattr(evt, "prev_country", None),
+                "prev_city": getattr(evt, "prev_city", None),
+                "distance_km": getattr(evt, "geo_distance_km", None),
+                "speed_kmh": 0.0,
+                "impossible_travel": bool(getattr(evt, "impossible_travel", False)),
+            },
+            "threats": {
+                "is_vpn": bool(getattr(evt, "is_vpn", False)),
+                "is_proxy": bool(getattr(evt, "is_proxy", False)),
+                "is_tor": bool(getattr(evt, "is_tor", False)),
+                "is_datacenter": bool(getattr(evt, "is_datacenter", False)),
+                "isp": getattr(evt, "isp", None),
+                "asn": getattr(evt, "asn", None),
+            },
+            "risk": {
+                "score": risk.risk_score if risk else (0 if evt.success else 50),
+                "level": risk.risk_level if risk else ("low" if evt.success else "medium"),
+                "decision": risk.decision if risk else ("allow" if evt.success else "block"),
+                "reasons": reasons_list,
+                "ml_anomaly_score": risk.ml_anomaly_score if risk else 0.0,
+            },
+        })
+    return events

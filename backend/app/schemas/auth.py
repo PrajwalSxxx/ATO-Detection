@@ -6,6 +6,8 @@ from typing import Optional
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+    device_fingerprint: Optional[str] = None
+    device_category: Optional[str] = None
 
     @field_validator("password")
     @classmethod

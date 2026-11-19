@@ -24,6 +24,7 @@ from app.services.feature_service import compute_features
 from app.services.risk_service import compute_risk_score, MLResult
 from app.services.alert_service import create_alert_for_risk
 from app.services.audit_service import write_audit_log
+from app.core.websocket_manager import ws_manager
 from app.ml.model_registry import model_registry
 from app.ml.inference import predict
 from app.ml.feature_pipeline import feature_vector_to_array
@@ -39,6 +40,8 @@ def process_login(
     password: str,
     ip_address: str,
     user_agent: Optional[str],
+    device_fingerprint: Optional[str] = None,
+    device_category: Optional[str] = None,
 ) -> dict:
     """
     Full login decision pipeline:
@@ -96,7 +99,11 @@ def process_login(
     db.add(user)
 
     # Telemetry & geo
-    telemetry = parse_telemetry(user_agent)
+    telemetry = parse_telemetry(
+        user_agent,
+        client_fingerprint=device_fingerprint,
+        client_device_category=device_category,
+    )
     geo = get_geo(ip_address)
 
     # Device analysis
@@ -132,6 +139,17 @@ def process_login(
         is_new_device=features.is_new_device == 1,
         is_new_ip=features.is_new_ip == 1,
         mfa_required=(risk_result.decision == "mfa"),
+        device_category=telemetry.device_category,
+        is_vpn=bool(geo.get("is_vpn", False)),
+        is_proxy=bool(geo.get("is_proxy", False)),
+        is_tor=bool(geo.get("is_tor", False)),
+        is_datacenter=bool(geo.get("is_datacenter", False)),
+        isp=geo.get("isp"),
+        asn=geo.get("asn"),
+        prev_country=getattr(features, "prev_country", None),
+        prev_city=getattr(features, "prev_city", None),
+        geo_distance_km=features.geo_distance_km,
+        impossible_travel=bool(getattr(features, "impossible_travel", False)),
     )
     db.add(evt)
     db.flush()
@@ -157,6 +175,9 @@ def process_login(
             "is_new_ip": features.is_new_ip,
             "geo_distance_km": features.geo_distance_km,
             "country_changed": features.country_changed,
+            "impossible_travel": getattr(features, "impossible_travel", False),
+            "is_vpn": geo.get("is_vpn", False),
+            "is_tor": geo.get("is_tor", False),
         }),
     )
     db.add(risk_rec)
@@ -172,6 +193,52 @@ def process_login(
     )
 
     db.commit()
+
+    # Real-time WebSocket Broadcast to Admin Dashboard
+    try:
+        ws_event = {
+            "type": "login_event",
+            "event_id": evt.id,
+            "user_id": user.id,
+            "email": user.email,
+            "role": user.role,
+            "timestamp": now.isoformat(),
+            "ip_address": ip_address,
+            "device": {
+                "fingerprint": telemetry.fingerprint_hash,
+                "browser": telemetry.browser_name,
+                "os": telemetry.os_name,
+                "category": telemetry.device_category,
+                "is_new": bool(features.is_new_device == 1),
+            },
+            "location": {
+                "country": geo.get("country"),
+                "city": geo.get("city"),
+                "prev_country": getattr(features, "prev_country", None),
+                "prev_city": getattr(features, "prev_city", None),
+                "distance_km": features.geo_distance_km,
+                "speed_kmh": getattr(features, "calculated_speed_kmh", 0.0),
+                "impossible_travel": bool(getattr(features, "impossible_travel", False)),
+            },
+            "threats": {
+                "is_vpn": bool(geo.get("is_vpn", False)),
+                "is_proxy": bool(geo.get("is_proxy", False)),
+                "is_tor": bool(geo.get("is_tor", False)),
+                "is_datacenter": bool(geo.get("is_datacenter", False)),
+                "isp": geo.get("isp"),
+                "asn": geo.get("asn"),
+            },
+            "risk": {
+                "score": risk_result.score,
+                "level": risk_result.level,
+                "decision": risk_result.decision,
+                "reasons": [{"factor": r.factor, "points": r.points, "description": r.description} for r in risk_result.reasons],
+                "ml_anomaly_score": ml_result.anomaly_score,
+            },
+        }
+        ws_manager.broadcast_security_event(ws_event)
+    except Exception as ws_err:
+        pass
 
     # Build response
     result = {
@@ -205,6 +272,17 @@ def _create_login_event(
     country: Optional[str] = None, region: Optional[str] = None, city: Optional[str] = None,
     latitude: Optional[float] = None, longitude: Optional[float] = None,
     is_new_device: bool = False, is_new_ip: bool = False, mfa_required: bool = False,
+    device_category: Optional[str] = None,
+    is_vpn: bool = False,
+    is_proxy: bool = False,
+    is_tor: bool = False,
+    is_datacenter: bool = False,
+    isp: Optional[str] = None,
+    asn: Optional[str] = None,
+    prev_country: Optional[str] = None,
+    prev_city: Optional[str] = None,
+    geo_distance_km: Optional[float] = None,
+    impossible_travel: bool = False,
 ) -> LoginEvent:
     return LoginEvent(
         id=str(uuid.uuid4()),
@@ -224,4 +302,15 @@ def _create_login_event(
         mfa_required=mfa_required,
         mfa_completed=False,
         created_at=now,
+        device_category=device_category,
+        is_vpn=is_vpn,
+        is_proxy=is_proxy,
+        is_tor=is_tor,
+        is_datacenter=is_datacenter,
+        isp=isp,
+        asn=asn,
+        prev_country=prev_country,
+        prev_city=prev_city,
+        geo_distance_km=geo_distance_km,
+        impossible_travel=impossible_travel,
     )

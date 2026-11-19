@@ -42,6 +42,13 @@ class Settings(BaseSettings):
     RATE_LIMIT_LOGIN: str = "10/minute"
     RATE_LIMIT_OTP: str = "5/minute"
 
+    # IP Intelligence & Geolocation
+    IP_INTELLIGENCE_PROVIDER: str = "ip-api"  # ip-api, ipinfo, ipdata, mock
+    IP_INTELLIGENCE_API_KEY: str = ""
+    IP_INTELLIGENCE_TIMEOUT_SECONDS: float = 3.0
+    IP_INTELLIGENCE_CACHE_TTL_SECONDS: int = 3600  # 1 hour
+    TRUSTED_PROXIES: List[str] = ["127.0.0.1", "::1"]
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 
