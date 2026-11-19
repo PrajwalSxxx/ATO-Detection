@@ -19,6 +19,16 @@ class LoginEventSchema(BaseModel):
     mfa_completed: bool
     is_new_device: bool
     is_new_ip: bool
+    mfa_phone_masked: Optional[str] = None
+    mfa_delivery_status: Optional[str] = None
+    device_category: Optional[str] = None
+    is_vpn: Optional[bool] = False
+    is_tor: Optional[bool] = False
+    is_proxy: Optional[bool] = False
+    prev_country: Optional[str] = None
+    prev_city: Optional[str] = None
+    geo_distance_km: Optional[float] = 0.0
+    impossible_travel: Optional[bool] = False
     created_at: datetime
 
     model_config = {"from_attributes": True}

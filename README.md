@@ -7,7 +7,8 @@
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-Paper%20%26%20Ink-38B2AC?logo=tailwind-css&logoColor=white)
 ![scikit-learn](https://img.shields.io/badge/scikit--learn-1.5+-F7931E?logo=scikit-learn&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
-![Tests](https://img.shields.io/badge/Tests-46%20Passed-2F7D5B?logo=pytest)
+![Tests](https://img.shields.io/badge/Tests-58%20Passed-2F7D5B?logo=pytest)
+![SMS Gateway](https://img.shields.io/badge/SMS%20MFA-Twilio%20%7C%20Fast2SMS%20%7C%20Mock-2F5D8A)
 ![WebSocket](https://img.shields.io/badge/WebSocket-Real--Time%20Stream-009688)
 ![IP%20Intel](https://img.shields.io/badge/IP%20Intelligence-VPN%20%7C%20Tor%20%7C%20Proxy-5B4BC4)
 ![Design](https://img.shields.io/badge/Design-Paper%20%26%20Ink-161616)
@@ -77,6 +78,7 @@ All requirements across the vertical slice have been implemented, tested, and ve
 | **Phase 8: Admin Dashboard Security Feed** | ✅ Implemented | `LiveSecurityFeed.jsx` embedded in dashboard with connection status badge, threat chips (VPN, Tor, Proxy, Hosting), location shifts, and detail drawer. |
 | **Phase 9: Hardware & Device Audit Views** | ✅ Implemented | Enhanced `LoginEventsTable` and `LoginEventDrawer` with device category, client fingerprint, ISP, ASN, and anonymizer detection flags. |
 | **Phase 10: Threat Demonstration Scenarios** | ✅ Implemented | 4 pre-configured scenarios in `SimulatorPanel.jsx`: Normal Login, New Mobile Device, VPN Location Change, and Suspicious ATO (Tor + Mobile). |
+| **Phase 11: SMS-Based Mobile OTP Delivery & MFA** | ✅ Implemented | Mobile ownership verification during registration, E.164 normalization, pluggable SMS gateway (`mock`, `twilio`, `fast2sms`), masked destination delivery (`+91 ******3210`), and adaptive step-up MFA. |
 
 ---
 
@@ -104,6 +106,17 @@ The IP intelligence subsystem (`ip_intelligence_service.py`) evaluates every aut
 - **Role-Based Authorization:** Strictly restricted to authenticated `admin` and `analyst` identities; unauthorized tokens are rejected with WebSocket close code `1008`.
 - **Heartbeat & Reconnect:** Client hook (`useSecurityEventStream.js`) dispatches ping/pong keepalives every 25 seconds and auto-reconnects with backoff.
 - **Graceful HTTP Polling Fallback:** If the WebSocket connection is interrupted, the client immediately switches to polling `GET /api/dashboard/live-events` so the admin never sees a blank feed.
+
+### 4. SMS-Based Mobile OTP Delivery & Verified Mobile Registration
+- **International & Indian Phone Normalization (`phonenumbers`):** Validates and normalizes phone numbers into canonical E.164 format (e.g. `+919876543210`, `+16502530000`, `+447911123456`) across registration and login challenges.
+- **Strict Mobile Ownership Verification:** New users register with their mobile number (`phone_verified = False`). An SMS OTP is dispatched; upon successful verification via `POST /auth/verify-registration-otp`, the number is marked `phone_verified = True`.
+- **Zero-Trust for Unverified Numbers:** The adaptive authentication engine strictly forbids sending login MFA challenges to unverified numbers.
+- **Pluggable SMS Gateway Architecture (`SMSService`):**
+  - **`mock`:** Deterministic offline SMS provider with memory outbox (`get_mock_sms_outbox()`). Requires zero external credentials or network connectivity, ideal for offline demos and CI/CD.
+  - **`twilio`:** Commercial SMS delivery via Twilio REST API with Account SID, Auth Token, and From/Messaging Service SID.
+  - **`fast2sms`:** Dedicated Indian SMS gateway with DLT OTP routing via Fast2SMS REST API.
+- **Production Privacy & Masking:** Phone numbers are strictly masked across all client payloads and SOC views (`+91 ******3210`). Raw OTP codes are never logged or stored in plaintext in production.
+- **Anti-Brute Force Protections:** Cryptographic 6-digit OTP generation, Argon2id one-way hashing, 5-minute expiration, 30-second resend cooldown, and 5-attempt automatic lockout.
 
 ---
 
@@ -274,7 +287,8 @@ This orchestrates:
 cd backend
 python -m pytest -v
 ```
-**Test Coverage Summary (46/46 Passed):**
+**Test Coverage Summary (58/58 Passed):**
+- `tests/test_sms_mfa.py` (12/12 Passed) — E.164 phone normalization, privacy phone masking, deterministic mock SMS delivery, user registration OTP verification, unverified mobile rejection, login MFA challenge dispatch, OTP one-time use, resend cooldown, expired OTP rejection, and 5-attempt brute-force lockout.
 - `tests/test_new_features.py` (14/14 Passed) — Real-time device fingerprinting & recognition, Haversine travel velocity, Tor exit node detection, VPN/Proxy flags, private RFC1918 resolution, network timeout fallbacks, threat-weighted risk scores, and WebSocket manager authorization & broadcast bridge.
 - `tests/test_auth.py` — Argon2id password hashing, timing-safe lookup, JWT issue/decode, OTP generation/validation.
 - `tests/test_risk.py` — Low-risk trust reduction, impossible velocity calculation, device novelty scoring.

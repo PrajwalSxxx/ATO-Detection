@@ -24,6 +24,7 @@ from app.services.feature_service import compute_features
 from app.services.risk_service import compute_risk_score, MLResult
 from app.services.alert_service import create_alert_for_risk
 from app.services.audit_service import write_audit_log
+from app.utils.phone_utils import mask_phone_number
 from app.core.websocket_manager import ws_manager
 from app.ml.model_registry import model_registry
 from app.ml.inference import predict
@@ -234,6 +235,11 @@ def process_login(
                 "decision": risk_result.decision,
                 "reasons": [{"factor": r.factor, "points": r.points, "description": r.description} for r in risk_result.reasons],
                 "ml_anomaly_score": ml_result.anomaly_score,
+            },
+            "mfa": {
+                "required": bool(risk_result.decision == "mfa"),
+                "phone_masked": mask_phone_number(user.phone_number) if user and user.phone_number else None,
+                "delivery_status": "mock_delivered" if settings.SMS_PROVIDER == "mock" else "sent",
             },
         }
         ws_manager.broadcast_security_event(ws_event)

@@ -49,6 +49,15 @@ class Settings(BaseSettings):
     IP_INTELLIGENCE_CACHE_TTL_SECONDS: int = 3600  # 1 hour
     TRUSTED_PROXIES: List[str] = ["127.0.0.1", "::1"]
 
+    # SMS Service
+    SMS_PROVIDER: str = "mock"  # mock, twilio, fast2sms
+    TWILIO_ACCOUNT_SID: str = ""
+    TWILIO_AUTH_TOKEN: str = ""
+    TWILIO_FROM_NUMBER: str = ""
+    TWILIO_MESSAGING_SERVICE_SID: str = ""
+    FAST2SMS_API_KEY: str = ""
+    SMS_TIMEOUT_SECONDS: float = 8.0
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 

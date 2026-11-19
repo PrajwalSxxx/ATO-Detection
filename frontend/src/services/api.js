@@ -41,6 +41,8 @@ api.interceptors.response.use(
 )
 
 // ─── Auth ──────────────────────────────────────────────────────────────────
+export const registerUser = (data) => api.post('/auth/register', data)
+export const verifyRegistrationOTP = (data) => api.post('/auth/verify-registration-otp', data)
 export const login = (data) => api.post('/auth/login', data)
 export const verifyOTP = (data) => {
   // Support both /auth/mfa/verify and fallback /auth/verify-otp
@@ -63,6 +65,7 @@ export const resendOTP = (data) => {
     login_event_id: data.login_event_id,
     email: data.email,
     temp_token: data.temp_token,
+    purpose: data.purpose || 'login_mfa',
   }
   return api.post('/auth/mfa/resend', payload).catch((err) => {
     if (err.response?.status === 404) {

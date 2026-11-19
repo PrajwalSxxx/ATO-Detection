@@ -17,13 +17,13 @@ from app.services.telemetry_service import parse_telemetry
 from app.services.geo_service import get_geo
 
 SAMPLE_USERS = [
-    {"email": "admin@ato-platform.com", "password": "Admin@SecurePass123", "name": "System Admin", "role": "admin"},
-    {"email": "analyst@ato-platform.com", "password": "Analyst@SecurePass123", "name": "Security Analyst", "role": "analyst"},
-    {"email": "user1@test.com", "password": "User@SecurePass123", "name": "Alice Johnson", "role": "user"},
-    {"email": "user2@test.com", "password": "User@SecurePass123", "name": "Bob Smith", "role": "user"},
-    {"email": "user3@test.com", "password": "User@SecurePass123", "name": "Charlie Davis", "role": "user"},
-    {"email": "user4@test.com", "password": "User@SecurePass123", "name": "Diana Prince", "role": "user"},
-    {"email": "user5@test.com", "password": "User@SecurePass123", "name": "Evan Wright", "role": "user"},
+    {"email": "admin@ato-platform.com", "password": "Admin@SecurePass123", "name": "System Admin", "role": "admin", "phone": "+919812345678"},
+    {"email": "analyst@ato-platform.com", "password": "Analyst@SecurePass123", "name": "Security Analyst", "role": "analyst", "phone": "+919823456789"},
+    {"email": "user1@test.com", "password": "User@SecurePass123", "name": "Alice Johnson", "role": "user", "phone": "+919876543210"},
+    {"email": "user2@test.com", "password": "User@SecurePass123", "name": "Bob Smith", "role": "user", "phone": "+919834567890"},
+    {"email": "user3@test.com", "password": "User@SecurePass123", "name": "Charlie Davis", "role": "user", "phone": "+919845678901"},
+    {"email": "user4@test.com", "password": "User@SecurePass123", "name": "Diana Prince", "role": "user", "phone": "+919856789012"},
+    {"email": "user5@test.com", "password": "User@SecurePass123", "name": "Evan Wright", "role": "user", "phone": "+919867890123"},
 ]
 
 DEFAULT_SETTINGS = [
@@ -68,6 +68,9 @@ ANOMALOUS_IPS = [
 
 def seed_database(db: Session = None) -> None:
     """Seed users, default settings, and 500 historical login events."""
+    from app.database.init_db import init_db
+    init_db()
+
     close_db = False
     if db is None:
         db = SessionLocal()
@@ -102,11 +105,17 @@ def seed_database(db: Session = None) -> None:
                     is_active=True,
                     is_locked=False,
                     mfa_enabled=(u["role"] in ("admin", "analyst")),
+                    phone_number=u.get("phone"),
+                    phone_verified=True,
                 )
                 db.add(user)
                 db.flush()
                 user_objs[u["email"]] = user
             else:
+                if not existing.phone_number and u.get("phone"):
+                    existing.phone_number = u.get("phone")
+                    existing.phone_verified = True
+                    db.add(existing)
                 user_objs[u["email"]] = existing
 
         # 3. Seed 500 Historical Login Events (only if < 100 exist)

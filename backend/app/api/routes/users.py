@@ -54,6 +54,20 @@ def create_user(
     if existing:
         raise UserAlreadyExistsError()
 
+    normalized_phone = None
+    if body.phone_number:
+        from app.utils.phone_utils import validate_and_normalize_phone
+        from fastapi import HTTPException
+        try:
+            normalized_phone = validate_and_normalize_phone(body.phone_number)
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+
+        # Check duplicate phone
+        existing_phone = db.query(User).filter(User.phone_number == normalized_phone).first()
+        if existing_phone:
+            raise HTTPException(status_code=409, detail="A user with this mobile number already exists.")
+
     user = User(
         email=body.email,
         hashed_password=hash_password(body.password),
@@ -61,6 +75,8 @@ def create_user(
         role=body.role,
         is_active=body.is_active,
         mfa_enabled=body.mfa_enabled,
+        phone_number=normalized_phone,
+        phone_verified=body.phone_verified if normalized_phone else False,
     )
     db.add(user)
     db.commit()

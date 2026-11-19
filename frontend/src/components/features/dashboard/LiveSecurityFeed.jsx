@@ -16,6 +16,7 @@ import {
   RefreshCw,
   AlertOctagon,
   Zap,
+  Phone,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { formatDistanceToNow } from 'date-fns'
@@ -288,6 +289,12 @@ export function LiveSecurityFeed({
                         IMPOSSIBLE TRAVEL
                       </span>
                     )}
+                    {(evt.mfa?.required || evt.risk?.decision === 'REQUIRE_MFA') && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-medium uppercase tracking-wider bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                        <Phone className="w-2.5 h-2.5" />
+                        {evt.mfa?.completed ? 'MFA: VERIFIED' : `MFA: ${evt.mfa?.delivery_status || 'SENT'}`}
+                      </span>
+                    )}
                   </div>
 
                   {/* Decision & Risk Score */}
@@ -338,6 +345,15 @@ export function LiveSecurityFeed({
                             <span className="text-ink-3">Category: </span>
                             <span className="text-ink capitalize">{evt.device?.category || 'desktop'}</span>
                           </div>
+                          {(evt.mfa?.required || evt.mfa?.phone_masked) && (
+                            <div>
+                              <span className="text-ink-3">Adaptive MFA: </span>
+                              <span className="text-ink font-semibold">
+                                {evt.mfa.phone_masked || 'Registered Mobile'} ({evt.mfa.delivery_status || 'sent'})
+                                {evt.mfa.completed ? ' • Verified' : ' • Pending'}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
 

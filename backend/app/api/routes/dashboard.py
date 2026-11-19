@@ -10,6 +10,7 @@ from app.models.login_event import LoginEvent
 from app.models.risk import RiskAssessment
 from app.models.alert import SecurityAlert
 from app.models.user import User
+from app.utils.phone_utils import mask_phone_number
 import json
 from app.schemas.dashboard import (
     DashboardSummary,
@@ -369,6 +370,12 @@ def get_live_security_events(
                 "is_datacenter": bool(getattr(evt, "is_datacenter", False)),
                 "isp": getattr(evt, "isp", None),
                 "asn": getattr(evt, "asn", None),
+            },
+            "mfa": {
+                "required": bool(evt.mfa_required),
+                "completed": bool(evt.mfa_completed),
+                "phone_masked": getattr(evt, "mfa_phone_masked", None) or (mask_phone_number(user.phone_number) if user and user.phone_number else None),
+                "delivery_status": getattr(evt, "mfa_delivery_status", None) or ("delivered" if evt.mfa_required else None),
             },
             "risk": {
                 "score": risk.risk_score if risk else (0 if evt.success else 50),

@@ -31,6 +31,8 @@ class LoginEvent(Base):
     # Auth decision
     mfa_required = Column(Boolean, default=False, nullable=False)
     mfa_completed = Column(Boolean, default=False, nullable=False)
+    mfa_phone_masked = Column(String(50), nullable=True)
+    mfa_delivery_status = Column(String(30), nullable=True)
     
     # Device flags
     is_new_device = Column(Boolean, default=False, nullable=False)

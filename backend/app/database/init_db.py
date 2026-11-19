@@ -39,6 +39,48 @@ def _migrate_schema() -> None:
                 for col_name, col_def in new_columns:
                     if col_name not in existing_cols:
                         conn.execute(text(f"ALTER TABLE login_events ADD COLUMN {col_name} {col_def}"))
-                conn.commit()
+
+                # Check and add MFA tracking columns to login_events
+                login_mfa_cols = [
+                    ("mfa_phone_masked", "VARCHAR(50)"),
+                    ("mfa_delivery_status", "VARCHAR(30)"),
+                ]
+                for col_name, col_def in login_mfa_cols:
+                    if col_name not in existing_cols:
+                        conn.execute(text(f"ALTER TABLE login_events ADD COLUMN {col_name} {col_def}"))
+
+            # Check users table
+            user_cols_res = conn.execute(text("PRAGMA table_info(users)")).fetchall()
+            if user_cols_res:
+                existing_user_cols = {row[1] for row in user_cols_res}
+                user_new_cols = [
+                    ("phone_number", "VARCHAR(30)"),
+                    ("phone_verified", "BOOLEAN DEFAULT 0 NOT NULL"),
+                ]
+                for col_name, col_def in user_new_cols:
+                    if col_name not in existing_user_cols:
+                        conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_def}"))
+
+            # Check mfa_verifications table
+            mfa_cols_res = conn.execute(text("PRAGMA table_info(mfa_verifications)")).fetchall()
+            if mfa_cols_res:
+                existing_mfa_cols = {row[1] for row in mfa_cols_res}
+                mfa_new_cols = [
+                    ("phone_number_masked", "VARCHAR(50)"),
+                    ("delivery_channel", "VARCHAR(20) DEFAULT 'sms' NOT NULL"),
+                    ("delivery_status", "VARCHAR(30) DEFAULT 'pending' NOT NULL"),
+                    ("provider", "VARCHAR(50)"),
+                    ("message_id", "VARCHAR(100)"),
+                    ("purpose", "VARCHAR(30) DEFAULT 'login_mfa' NOT NULL"),
+                ]
+                for col_name, col_def in mfa_new_cols:
+                    if col_name not in existing_mfa_cols:
+                        conn.execute(text(f"ALTER TABLE mfa_verifications ADD COLUMN {col_name} {col_def}"))
+
+            conn.commit()
     except Exception as e:
         print(f"[init_db] Note on schema migration: {e}")
+
+
+if __name__ == "__main__":
+    init_db()

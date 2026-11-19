@@ -10,6 +10,8 @@ class UserBase(BaseModel):
     role: str = "user"
     is_active: bool = True
     mfa_enabled: bool = False
+    phone_number: Optional[str] = None
+    phone_verified: bool = False
 
 
 class UserCreate(UserBase):

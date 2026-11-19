@@ -13,6 +13,7 @@ import {
   Clock,
   KeyRound,
   FileCode,
+  Phone,
 } from 'lucide-react'
 
 export function LoginEventDrawer({ isOpen, onClose, event }) {
@@ -228,6 +229,38 @@ export function LoginEventDrawer({ isOpen, onClose, event }) {
             )}
           </div>
         </div>
+
+        {/* Adaptive MFA & SMS Delivery */}
+        {(event.decision === 'REQUIRE_MFA' || event.mfa_required || event.mfa_phone_masked) && (
+          <div className="space-y-2">
+            <h4 className="text-[11px] font-mono font-semibold uppercase tracking-wider text-ink-3">
+              Adaptive MFA & SMS Delivery
+            </h4>
+            <div className="p-3.5 bg-paper-sunken rounded-[6px] border border-line-soft space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-ink-2 flex items-center gap-1.5">
+                  <Phone className="w-4 h-4 text-ink-3" />
+                  Masked Destination:
+                </span>
+                <span className="text-ink font-mono font-medium">
+                  {event.mfa_phone_masked || 'Registered Mobile (Masked)'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-ink-2">Delivery Channel / Status:</span>
+                <span className="inline-block text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 uppercase font-semibold">
+                  {event.mfa_delivery_status || 'SMS Dispatched'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-ink-2">Verification State:</span>
+                <span className={`font-mono text-xs font-semibold ${event.mfa_completed ? 'text-emerald-600' : 'text-amber-600'}`}>
+                  {event.mfa_completed ? 'MFA Successfully Completed' : 'Pending / Step-Up Required'}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Raw ML Features */}
         {Object.keys(features).length > 0 && (

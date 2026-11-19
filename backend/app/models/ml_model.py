@@ -17,6 +17,14 @@ class MFAVerification(Base):
     attempts = Column(Integer, default=0, nullable=False)
     is_used = Column(Boolean, default=False, nullable=False)
     is_expired = Column(Boolean, default=False, nullable=False)
+
+    # SMS delivery metadata
+    phone_number_masked = Column(String(50), nullable=True)
+    delivery_channel = Column(String(20), default="sms", nullable=False)
+    delivery_status = Column(String(30), default="pending", nullable=False)
+    provider = Column(String(50), nullable=True)
+    message_id = Column(String(100), nullable=True)
+    purpose = Column(String(30), default="login_mfa", nullable=False)
     
     expires_at = Column(DateTime(timezone=True), nullable=False)
     last_sent_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)

@@ -20,6 +20,8 @@ class User(Base):
     locked_until = Column(DateTime(timezone=True), nullable=True)
     last_login_at = Column(DateTime(timezone=True), nullable=True)
     mfa_enabled = Column(Boolean, default=False, nullable=False)
+    phone_number = Column(String(30), unique=True, nullable=True, index=True)
+    phone_verified = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc),
                         onupdate=lambda: datetime.now(timezone.utc), nullable=False)

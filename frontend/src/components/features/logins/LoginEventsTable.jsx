@@ -131,8 +131,17 @@ export function LoginEventsTable({
     },
     {
       key: 'decision',
-      label: 'Decision',
-      render: (val) => <DecisionBadge decision={val || 'ALLOW'} size="sm" />,
+      label: 'Decision / MFA',
+      render: (val, row) => (
+        <div className="flex flex-col gap-1 items-start">
+          <DecisionBadge decision={val || 'ALLOW'} size="sm" />
+          {row.mfa_phone_masked && (
+            <span className="text-[10px] font-mono text-text-muted">
+              {row.mfa_phone_masked}
+            </span>
+          )}
+        </div>
+      ),
     },
   ]
 

@@ -24,6 +24,7 @@ import {
   User,
   Layers,
   X,
+  Phone,
 } from 'lucide-react'
 
 export default function UsersPage() {
@@ -37,6 +38,7 @@ export default function UsersPage() {
   // Form states for create user
   const [newEmail, setNewEmail] = useState('')
   const [newFullName, setNewFullName] = useState('')
+  const [newPhone, setNewPhone] = useState('')
   const [newRole, setNewRole] = useState('user')
   const [newPassword, setNewPassword] = useState('')
 
@@ -78,6 +80,7 @@ export default function UsersPage() {
       await createUser({
         email: newEmail,
         full_name: newFullName,
+        phone_number: newPhone || undefined,
         role: newRole,
         password: newPassword,
       })
@@ -85,6 +88,7 @@ export default function UsersPage() {
       setIsCreateOpen(false)
       setNewEmail('')
       setNewFullName('')
+      setNewPhone('')
       setNewPassword('')
     } catch (err) {
       notify.error(err.normalizedMessage || 'Failed to create user')
@@ -106,15 +110,26 @@ export default function UsersPage() {
   const columns = [
     {
       key: 'full_name',
-      label: 'Name & Email',
+      label: 'Name & Contact',
       render: (val, row) => (
-        <div className="flex flex-col">
+        <div className="flex flex-col gap-0.5">
           <span className="font-medium text-ink text-xs">
             {val || row.email?.split('@')[0] || 'User'}
           </span>
           <span className="font-mono text-[11px] text-ink-3">
             {row.email}
           </span>
+          {row.phone_number && (
+            <span className="font-mono text-[10px] text-ink-3 flex items-center gap-1">
+              <Phone className="w-2.5 h-2.5 text-ink-3" />
+              {row.phone_number}
+              {row.phone_verified ? (
+                <span className="text-emerald-600 font-semibold text-[9px]">(verified)</span>
+              ) : (
+                <span className="text-amber-600 font-semibold text-[9px]">(unverified)</span>
+              )}
+            </span>
+          )}
         </div>
       ),
     },
@@ -305,6 +320,14 @@ export default function UsersPage() {
             required
           />
 
+          <Input
+            label="Mobile Phone Number"
+            type="tel"
+            placeholder="+91 98765 43210"
+            value={newPhone}
+            onChange={(e) => setNewPhone(e.target.value)}
+          />
+
           <Select
             label="Assigned Role"
             value={newRole}
@@ -360,6 +383,12 @@ export default function UsersPage() {
               <div className="flex items-center justify-between">
                 <span className="text-ink-3 font-mono text-[11px] uppercase">Current Risk Profile:</span>
                 <RiskBadge level={selectedUser.risk_level || 'LOW'} score={selectedUser.risk_score} size="sm" />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-ink-3 font-mono text-[11px] uppercase">Registered Mobile:</span>
+                <span className="font-mono text-ink">
+                  {selectedUser.phone_number || 'None'} {selectedUser.phone_verified ? '(Verified)' : selectedUser.phone_number ? '(Unverified)' : ''}
+                </span>
               </div>
             </div>
 
